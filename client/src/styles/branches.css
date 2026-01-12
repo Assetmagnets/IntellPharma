@@ -1,0 +1,155 @@
+/* =====================================================
+   BRANCHES PAGE STYLES
+   ===================================================== */
+
+.branches-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+}
+
+@media (max-width: 1200px) {
+    .branches-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .branches-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.branch-card {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+    transition: all var(--transition-normal);
+}
+
+.branch-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+    border-color: var(--primary-500);
+}
+
+.branch-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.branch-icon {
+    font-size: 2.5rem;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(0, 102, 230, 0.2), rgba(0, 230, 172, 0.1));
+    border-radius: var(--radius-lg);
+}
+
+.branch-info h3 {
+    color: var(--dark-text);
+    font-size: 1.125rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: var(--radius-full);
+}
+
+.status-badge.active {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.status-badge.inactive {
+    background: var(--dark-surface-2);
+    color: var(--dark-text-secondary);
+}
+
+.branch-details {
+    margin-bottom: var(--spacing-lg);
+}
+
+.detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) 0;
+    color: var(--dark-text-secondary);
+    font-size: 0.875rem;
+}
+
+.detail-icon {
+    flex-shrink: 0;
+}
+
+.branch-stats {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.branch-stats .stat {
+    flex: 1;
+    text-align: center;
+}
+
+.branch-stats .stat-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-400);
+}
+
+.branch-stats .stat-label {
+    font-size: 0.75rem;
+    color: var(--dark-text-secondary);
+}
+
+.branch-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.branch-actions .btn {
+    flex: 1;
+}
+
+/* Branch Modal */
+.branch-modal {
+    max-width: 550px;
+}
+
+.branch-form {
+    padding: var(--spacing-lg);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+@media (max-width: 500px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+textarea.form-input {
+    resize: vertical;
+    min-height: 60px;
+}

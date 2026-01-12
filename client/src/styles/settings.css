@@ -1,0 +1,245 @@
+/* =====================================================
+   SETTINGS PAGE STYLES
+   ===================================================== */
+
+.settings-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: var(--spacing-lg);
+}
+
+@media (max-width: 900px) {
+    .settings-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Settings Navigation */
+.settings-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-md);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    height: fit-content;
+    position: sticky;
+    top: var(--spacing-lg);
+}
+
+@media (max-width: 900px) {
+    .settings-nav {
+        flex-direction: row;
+        overflow-x: auto;
+        position: static;
+    }
+}
+
+.settings-nav .nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-lg);
+    color: var(--dark-text-secondary);
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.settings-nav .nav-item:hover {
+    background: var(--dark-surface-2);
+    color: var(--dark-text);
+}
+
+.settings-nav .nav-item.active {
+    background: linear-gradient(135deg, rgba(0, 102, 230, 0.2), rgba(0, 230, 172, 0.1));
+    color: var(--primary-400);
+}
+
+/* Settings Content */
+.settings-content {
+    min-width: 0;
+}
+
+.settings-section {
+    padding: var(--spacing-xl);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-xl);
+}
+
+.settings-section h2 {
+    color: var(--dark-text);
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.section-desc {
+    color: var(--dark-text-secondary);
+    margin-bottom: var(--spacing-xl);
+}
+
+.settings-section form {
+    max-width: 500px;
+}
+
+/* Toggle List */
+.toggle-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+    max-width: 600px;
+}
+
+.toggle-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+}
+
+.toggle-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.toggle-label {
+    color: var(--dark-text);
+    font-weight: 500;
+}
+
+.toggle-desc {
+    color: var(--dark-text-secondary);
+    font-size: 0.8125rem;
+    margin-top: 2px;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--dark-bg);
+    border-radius: var(--radius-full);
+    transition: all var(--transition-fast);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: var(--dark-text-secondary);
+    border-radius: 50%;
+    transition: all var(--transition-fast);
+}
+
+.toggle-switch input:checked+.toggle-slider {
+    background: var(--primary-500);
+}
+
+.toggle-switch input:checked+.toggle-slider:before {
+    transform: translateX(22px);
+    background: white;
+}
+
+/* Security Info */
+.security-info {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+    max-width: 500px;
+}
+
+.security-info h3 {
+    color: var(--dark-text);
+    margin-bottom: var(--spacing-md);
+}
+
+.security-info ul {
+    list-style: none;
+}
+
+.security-info li {
+    padding: var(--spacing-xs) 0;
+    color: var(--dark-text-secondary);
+}
+
+.security-info li::before {
+    content: "✓ ";
+    color: var(--success);
+}
+
+/* Billing Card */
+.billing-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    background: linear-gradient(135deg, rgba(0, 102, 230, 0.15), rgba(0, 230, 172, 0.1));
+    border: 1px solid var(--primary-500);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--spacing-xl);
+}
+
+.billing-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.billing-icon {
+    font-size: 2rem;
+}
+
+.billing-header h3 {
+    color: var(--dark-text);
+    margin: 0;
+}
+
+.billing-header p {
+    color: var(--primary-400);
+    font-weight: 500;
+    margin: 0;
+}
+
+.billing-info-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.billing-info-section h3 {
+    color: var(--dark-text);
+    margin-bottom: var(--spacing-sm);
+}
+
+.text-muted {
+    color: var(--dark-text-secondary);
+    margin-bottom: var(--spacing-md);
+}

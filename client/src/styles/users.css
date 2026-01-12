@@ -1,0 +1,246 @@
+/* =====================================================
+   USERS PAGE STYLES
+   ===================================================== */
+
+.roles-overview {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+.roles-overview h3 {
+    color: var(--dark-text);
+    margin-bottom: var(--spacing-lg);
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-md);
+}
+
+@media (max-width: 1024px) {
+    .roles-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .roles-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.role-card {
+    padding: var(--spacing-md);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+}
+
+.role-card p {
+    color: var(--dark-text-secondary);
+    font-size: 0.8125rem;
+    margin-top: var(--spacing-xs);
+}
+
+/* Role Badges */
+.role-badge,
+.badge-owner {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-owner {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.badge-manager {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+}
+
+.badge-pharmacist {
+    background: linear-gradient(135deg, var(--accent-500), var(--accent-600));
+    color: white;
+}
+
+.badge-staff {
+    background: var(--dark-surface-2);
+    color: var(--dark-text);
+    border: 1px solid var(--dark-border);
+}
+
+/* User Cell */
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    color: var(--dark-text);
+    font-weight: 500;
+}
+
+.user-email {
+    color: var(--dark-text-secondary);
+    font-size: 0.8125rem;
+}
+
+/* User Modal */
+.user-modal {
+    max-width: 550px;
+}
+
+.user-form {
+    padding: var(--spacing-lg);
+}
+
+/* Role Selector */
+.role-selector {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.role-option {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-md);
+    background: var(--dark-surface-2);
+    border: 2px solid var(--dark-border);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.role-option:hover {
+    border-color: var(--primary-500);
+}
+
+.role-option.selected {
+    border-color: var(--primary-500);
+    background: rgba(0, 102, 230, 0.1);
+}
+
+.role-option input {
+    display: none;
+}
+
+.role-option .role-label {
+    color: var(--dark-text);
+    font-weight: 600;
+}
+
+.role-option .role-desc {
+    color: var(--dark-text-secondary);
+    font-size: 0.8125rem;
+    margin-top: 2px;
+}
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.text-danger {
+    color: var(--danger-500) !important;
+}
+
+.text-danger:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Activity Modal */
+.activity-modal {
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    border-top: 1px solid var(--dark-border);
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.activity-item {
+    display: flex;
+    gap: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--dark-surface-2);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.activity-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 0.25rem;
+}
+
+.activity-item .dot {
+    width: 10px;
+    height: 10px;
+    background: var(--primary-500);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(0, 102, 230, 0.1);
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-action {
+    color: var(--dark-text);
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.activity-details {
+    color: var(--dark-text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+}
+
+.activity-time {
+    color: var(--dark-text-muted);
+    font-size: 0.75rem;
+}
+

@@ -1,0 +1,287 @@
+// Medistock Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================
+// ENUMS
+// =====================
+
+enum Role {
+  OWNER
+  MANAGER
+  PHARMACIST
+  BILLING_STAFF
+  INVENTORY_STAFF
+}
+
+enum SubscriptionPlan {
+  BASIC
+  PRO
+  PREMIUM
+  ENTERPRISE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  CREDIT
+}
+
+enum InvoiceStatus {
+  PAID
+  PARTIAL
+  PENDING
+  REFUNDED
+}
+
+// =====================
+// MODELS
+// =====================
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  name            String
+  phone           String?
+  role            Role      @default(BILLING_STAFF)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relationships
+  ownedBranches   Branch[]  @relation("BranchOwner")
+  branchAccess    BranchUser[]
+  invoices        Invoice[]
+  auditLogs       AuditLog[]
+  promptHistory   PromptHistory[]
+}
+
+model Branch {
+  id              String    @id @default(uuid())
+  name            String
+  address         String?
+  phone           String?
+  gstNumber       String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Owner of the branch (subscription holder)
+  ownerId         String
+  owner           User      @relation("BranchOwner", fields: [ownerId], references: [id])
+
+  // Relationships
+  users           BranchUser[]
+  products        Product[]
+  invoices        Invoice[]
+  stockTransfers  StockTransfer[]
+  auditLogs       AuditLog[]
+  subscription    Subscription?
+}
+
+model BranchUser {
+  id              String    @id @default(uuid())
+  userId          String
+  branchId        String
+  role            Role      @default(BILLING_STAFF)
+  createdAt       DateTime  @default(now())
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch          Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, branchId])
+}
+
+model Subscription {
+  id              String            @id @default(uuid())
+  branchId        String            @unique
+  plan            SubscriptionPlan  @default(BASIC)
+  maxBranches     Int               @default(1)
+  extraBranches   Int               @default(0)
+  aiEnabled       Boolean           @default(false)
+  analyticsEnabled Boolean          @default(false)
+  startDate       DateTime          @default(now())
+  endDate         DateTime?
+  autoRenew       Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  branch          Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id              String    @id @default(uuid())
+  name            String
+  genericName     String?
+  manufacturer    String?
+  barcode         String?
+  batchNumber     String?
+  expiryDate      DateTime?
+  mrp             Decimal   @db.Decimal(10, 2)
+  purchasePrice   Decimal   @db.Decimal(10, 2)
+  gstRate         Decimal   @db.Decimal(5, 2) @default(12)
+  hsnCode         String?
+  quantity        Int       @default(0)
+  minStock        Int       @default(10)
+  unit            String    @default("Pcs")
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  branchId        String
+  branch          Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  invoiceItems    InvoiceItem[]
+  stockTransfers  StockTransferItem[]
+
+  @@index([barcode])
+  @@index([name])
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  invoiceNumber   String        @unique
+  customerName    String?
+  customerPhone   String?
+  customerAddress String?
+  subtotal        Decimal       @db.Decimal(12, 2)
+  discountAmount  Decimal       @db.Decimal(12, 2) @default(0)
+  cgstAmount      Decimal       @db.Decimal(12, 2) @default(0)
+  sgstAmount      Decimal       @db.Decimal(12, 2) @default(0)
+  igstAmount      Decimal       @db.Decimal(12, 2) @default(0)
+  totalAmount     Decimal       @db.Decimal(12, 2)
+  paymentMethod   PaymentMethod @default(CASH)
+  status          InvoiceStatus @default(PAID)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+
+  createdById     String
+  createdBy       User          @relation(fields: [createdById], references: [id])
+
+  items           InvoiceItem[]
+  returns         Return[]
+
+  @@index([invoiceNumber])
+  @@index([createdAt])
+}
+
+model InvoiceItem {
+  id              String    @id @default(uuid())
+  invoiceId       String
+  productId       String
+  productName     String
+  quantity        Int
+  unitPrice       Decimal   @db.Decimal(10, 2)
+  discount        Decimal   @db.Decimal(10, 2) @default(0)
+  gstRate         Decimal   @db.Decimal(5, 2)
+  cgst            Decimal   @db.Decimal(10, 2) @default(0)
+  sgst            Decimal   @db.Decimal(10, 2) @default(0)
+  igst            Decimal   @db.Decimal(10, 2) @default(0)
+  total           Decimal   @db.Decimal(12, 2)
+
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product         Product   @relation(fields: [productId], references: [id])
+}
+
+model Return {
+  id              String    @id @default(uuid())
+  invoiceId       String
+  reason          String
+  refundAmount    Decimal   @db.Decimal(12, 2)
+  creditNote      String?
+  createdAt       DateTime  @default(now())
+
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id])
+}
+
+model StockTransfer {
+  id              String    @id @default(uuid())
+  fromBranchId    String
+  toBranchId      String
+  status          String    @default("PENDING")
+  notes           String?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  fromBranch      Branch    @relation(fields: [fromBranchId], references: [id])
+  items           StockTransferItem[]
+}
+
+model StockTransferItem {
+  id              String        @id @default(uuid())
+  transferId      String
+  productId       String
+  quantity        Int
+
+  transfer        StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product         Product       @relation(fields: [productId], references: [id])
+}
+
+model AuditLog {
+  id              String    @id @default(uuid())
+  action          String
+  entity          String
+  entityId        String?
+  details         String?
+  ipAddress       String?
+  createdAt       DateTime  @default(now())
+
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+
+  branchId        String?
+  branch          Branch?   @relation(fields: [branchId], references: [id])
+
+  @@index([createdAt])
+  @@index([action])
+}
+
+model PromptHistory {
+  id              String    @id @default(uuid())
+  prompt          String
+  response        String?
+  structuredData  Json?
+  executionTime   Int?
+  createdAt       DateTime  @default(now())
+
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+
+  branchId        String?
+
+  @@index([createdAt])
+}
+
+model SuggestedPrompt {
+  id              String    @id @default(uuid())
+  prompt          String
+  description     String?
+  roles           Role[]
+  category        String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+}
+
+model PasswordResetOTP {
+  id        String   @id @default(uuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([email])
+}

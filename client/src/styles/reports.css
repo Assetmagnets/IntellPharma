@@ -1,0 +1,268 @@
+/* =====================================================
+   REPORTS PAGE STYLES
+   ===================================================== */
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.date-range-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+@media (max-width: 768px) {
+    .date-range-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.date-inputs {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.date-inputs .form-group {
+    margin-bottom: 0;
+}
+
+.quick-dates {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+/* Reports Tabs */
+.reports-tabs {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Report Content */
+.report-content {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Sales Report */
+.sales-report .stats-grid {
+    margin-bottom: var(--spacing-xl);
+}
+
+.report-section {
+    padding: var(--spacing-xl);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-xl);
+}
+
+.report-section h3 {
+    color: var(--dark-text);
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Payment Breakdown */
+.payment-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.breakdown-item {
+    display: grid;
+    grid-template-columns: 150px 1fr 200px;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+}
+
+@media (max-width: 768px) {
+    .breakdown-item {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+}
+
+.breakdown-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.method-icon {
+    font-size: 1.5rem;
+}
+
+.method-name {
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.breakdown-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    justify-content: flex-end;
+}
+
+.breakdown-count {
+    color: var(--dark-text-secondary);
+    font-size: 0.875rem;
+}
+
+.breakdown-amount {
+    color: var(--primary-400);
+    font-weight: 600;
+    min-width: 100px;
+    text-align: right;
+}
+
+.breakdown-bar {
+    height: 8px;
+    background: var(--dark-bg);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-500), var(--accent-500));
+    border-radius: var(--radius-full);
+    transition: width 0.5s ease-out;
+}
+
+/* GST Report */
+.gst-summary {
+    padding: var(--spacing-xl);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--spacing-lg);
+}
+
+.gst-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+    .gst-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.gst-card {
+    padding: var(--spacing-lg);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+    text-align: center;
+}
+
+.gst-card.total {
+    background: linear-gradient(135deg, rgba(0, 102, 230, 0.2), rgba(0, 230, 172, 0.1));
+    border: 1px solid var(--primary-500);
+}
+
+.gst-label {
+    color: var(--dark-text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.gst-value {
+    color: var(--dark-text);
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.gst-card.total .gst-value {
+    color: var(--primary-400);
+}
+
+.gst-info {
+    padding: var(--spacing-xl);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-xl);
+}
+
+.info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--primary-400);
+    min-width: 80px;
+}
+
+.info-desc {
+    color: var(--dark-text-secondary);
+}
+
+.export-actions {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+/* Branch Comparison */
+.branch-comparison {
+    padding: var(--spacing-xl);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-xl);
+}
+
+.branch-name {
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.performance-bar {
+    position: relative;
+    height: 24px;
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.performance-bar .bar-fill {
+    height: 100%;
+}
+
+.performance-bar .bar-label {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dark-text);
+}
+
+/* Empty State */
+.branch-report .empty-state {
+    padding: var(--spacing-2xl);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-xl);
+}
