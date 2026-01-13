@@ -45,7 +45,7 @@ router.post('/prompt', authenticate, requireFeature('ai'), async (req, res) => {
 
         // Construct context-aware prompt
         const systemContext = `
-            You are an AI assistant for a pharmacy management system called Medistock.
+            You are an AI assistant for a pharmacy management system called PharmaStock.
             User Role: ${req.user.role}
             Current Branch ID: ${branchId || 'Global'}
             Context Data: ${JSON.stringify(context || {})}

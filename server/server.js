@@ -9,16 +9,22 @@ const inventoryRoutes = require('./src/routes/inventory.routes');
 const billingRoutes = require('./src/routes/billing.routes');
 const aiRoutes = require('./src/routes/ai.routes');
 const subscriptionRoutes = require('./src/routes/subscription.routes');
+const stripeRoutes = require('./src/routes/stripe.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const { runScheduler } = require('./src/services/scheduler');
+
+// Start Scheduler
+runScheduler();
 
 // Middleware
 app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logging
 app.use((req, res, next) => {
@@ -38,6 +44,7 @@ app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/billing', billingRoutes);
 app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/subscription', subscriptionRoutes);
+app.use('/api/v1/stripe', stripeRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

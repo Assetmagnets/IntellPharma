@@ -98,10 +98,16 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'PHARMACIS
                     total: itemTotal
                 });
 
-                // Update stock
+                // Update stock and auto-archive if zero
+                const newQuantity = product.quantity - item.quantity;
+                const shouldArchive = newQuantity <= 0;
+
                 await tx.product.update({
                     where: { id: product.id },
-                    data: { quantity: product.quantity - item.quantity }
+                    data: {
+                        quantity: newQuantity,
+                        isActive: !shouldArchive // Deactivate if stock is 0 or less
+                    }
                 });
             }
 

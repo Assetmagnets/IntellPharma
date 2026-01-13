@@ -149,6 +149,7 @@
     background: linear-gradient(135deg,
             rgba(0, 102, 230, 0.1) 0%,
             var(--dark-surface) 100%);
+    padding-top: calc(var(--spacing-xl) + 2rem);
 }
 
 .plan-card.current {
@@ -157,16 +158,20 @@
 
 .popular-badge {
     position: absolute;
-    top: -12px;
+    top: 12px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 0.375rem 1rem;
+    padding: 0.5rem 1.25rem;
     background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
     color: white;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
     border-radius: var(--radius-full);
     white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 102, 230, 0.4);
+    z-index: 10;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .plan-icon-large {
@@ -357,4 +362,265 @@
 .upgrade-features li {
     padding: var(--spacing-xs) 0;
     color: var(--dark-text-secondary);
+}
+
+/* Stripe-specific Styles */
+.plan-status-badges {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.stripe-active-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 0.375rem 0.75rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+    color: #a78bfa;
+    border-radius: var(--radius-full);
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.stripe-info {
+    padding: var(--spacing-md);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.stripe-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stripe-detail .label {
+    color: var(--dark-text-secondary);
+    font-size: 0.875rem;
+}
+
+.stripe-detail .value {
+    color: var(--dark-text);
+    font-weight: 600;
+}
+
+.stripe-warning {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+}
+
+.stripe-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: linear-gradient(135deg, #635bff20, #0a2540);
+    border: 1px solid #635bff40;
+    border-radius: var(--radius-lg);
+    color: var(--dark-text-secondary);
+    font-size: 0.875rem;
+}
+
+.stripe-badge strong {
+    color: #635bff;
+    font-weight: 700;
+}
+
+/* Payment Result Pages */
+.payment-result-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    background: var(--dark-bg);
+}
+
+.payment-result-card {
+    max-width: 500px;
+    width: 100%;
+    padding: var(--spacing-2xl);
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: var(--radius-2xl);
+    text-align: center;
+}
+
+.payment-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.payment-loading h2 {
+    color: var(--dark-text);
+    font-size: 1.25rem;
+}
+
+.payment-loading p {
+    color: var(--dark-text-secondary);
+}
+
+.payment-success,
+.payment-cancelled,
+.payment-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.success-icon {
+    color: var(--success);
+    animation: bounceIn 0.6s ease-out;
+}
+
+.cancel-icon {
+    color: var(--warning);
+}
+
+.error-icon {
+    font-size: 3rem;
+}
+
+.payment-success h1,
+.payment-cancelled h1,
+.payment-error h1 {
+    color: var(--dark-text);
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.success-message,
+.cancel-message {
+    color: var(--dark-text-secondary);
+    font-size: 1rem;
+}
+
+.plan-badge-large {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+    color: white;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    margin: var(--spacing-md) 0;
+}
+
+.benefits-list {
+    list-style: none;
+    text-align: left;
+    width: 100%;
+    margin: var(--spacing-lg) 0;
+    padding: var(--spacing-lg);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+}
+
+.benefits-list li {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
+    color: var(--dark-text-secondary);
+}
+
+.benefits-list li svg {
+    color: var(--success);
+    flex-shrink: 0;
+}
+
+.cancel-reasons {
+    text-align: left;
+    width: 100%;
+    margin: var(--spacing-lg) 0;
+    padding: var(--spacing-lg);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-lg);
+}
+
+.cancel-reasons h3 {
+    color: var(--dark-text);
+    font-size: 1rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.cancel-reasons ul {
+    list-style: none;
+}
+
+.cancel-reasons li {
+    padding: var(--spacing-xs) 0;
+    color: var(--dark-text-secondary);
+}
+
+.payment-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    width: 100%;
+    margin-top: var(--spacing-lg);
+}
+
+.payment-actions .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Animate spin for loaders */
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Redirect message */
+.redirect-message {
+    color: var(--dark-text-secondary);
+    font-size: 0.9rem;
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--dark-surface-2);
+    border-radius: var(--radius-md);
+}
+
+.redirect-message strong {
+    color: var(--primary-400);
+    font-size: 1.1rem;
 }

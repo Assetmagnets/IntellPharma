@@ -166,6 +166,8 @@ router.get('/me', authenticate, async (req, res) => {
                 name: true,
                 phone: true,
                 role: true,
+                profileImage: true,
+                notificationSettings: true,
                 createdAt: true,
                 branchAccess: {
                     include: {
@@ -206,6 +208,8 @@ router.get('/me', authenticate, async (req, res) => {
             ? user.ownedBranches
             : user.branchAccess.map(ba => ba.branch);
 
+        console.log(`GET /me - User: ${user.email}, Image Length: ${user.profileImage ? user.profileImage.length : 'null'}`);
+
         res.json({
             ...user,
             branches,
@@ -215,6 +219,92 @@ router.get('/me', authenticate, async (req, res) => {
     } catch (error) {
         console.error('Get profile error:', error);
         res.status(500).json({ error: 'Failed to fetch profile.' });
+    }
+});
+
+// Update user profile
+router.put('/update-profile', authenticate, async (req, res) => {
+    try {
+        const { name, email, phone, profileImage } = req.body;
+        const userId = req.user.id;
+
+        // Check if email is already taken by another user
+        if (email) {
+            const existingUser = await prisma.user.findUnique({ where: { email } });
+            if (existingUser && existingUser.id !== userId) {
+                return res.status(400).json({ error: 'Email is already in use by another account.' });
+            }
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                name,
+                email,
+                phone,
+                profileImage
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                role: true,
+                profileImage: true
+            }
+        });
+
+        res.json({
+            message: 'Profile updated successfully!',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ error: 'Failed to update profile.' });
+    }
+});
+
+// Update user settings
+router.put('/update-settings', authenticate, async (req, res) => {
+    try {
+        const { notificationSettings } = req.body;
+
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { notificationSettings },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                notificationSettings: true
+            }
+        });
+
+        res.json({
+            message: 'Settings updated successfully!',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('Update settings error:', error);
+        res.status(500).json({ error: 'Failed to update settings.' });
+    }
+});
+
+// Verify password
+router.post('/verify-password', authenticate, async (req, res) => {
+    try {
+        const { password } = req.body;
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return res.status(400).json({ valid: false, error: 'Incorrect password.' });
+        }
+
+        res.json({ valid: true });
+    } catch (error) {
+        console.error('Verify password error:', error);
+        res.status(500).json({ error: 'Verification failed.' });
     }
 });
 
@@ -277,12 +367,12 @@ async function sendOTPEmail(email, otp) {
     const transporter = createTransporter();
 
     const mailOptions = {
-        from: `"Medistock" <${process.env.EMAIL_USER}>`,
+        from: `"PharmaStock" <${process.env.EMAIL_USER}>`,
         to: email,
-        subject: 'Password Reset OTP - Medistock',
+        subject: 'Password Reset OTP - PharmaStock',
         html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #0066e6;">Medistock Password Reset</h2>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #0066e6;">PharmaStock Password Reset</h2>
                 <p>You requested to reset your password. Use the OTP below to proceed:</p>
                 <div style="background: #f5f5f5; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
                     <h1 style="color: #0066e6; letter-spacing: 8px; margin: 0;">${otp}</h1>
@@ -426,6 +516,33 @@ router.post('/forgot-password/reset-password', async (req, res) => {
     } catch (error) {
         console.error('Reset password error:', error);
         res.status(500).json({ error: 'Failed to reset password. Please try again.' });
+    }
+});
+
+// Test Notifications (Trigger manually)
+const { sendNotificationToUser } = require('../services/scheduler');
+
+router.post('/test-notifications', authenticate, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id }
+        });
+
+        // Ensure user has settings
+        if (!user.notificationSettings) {
+            return res.status(400).json({ error: 'Please save your notification settings first.' });
+        }
+
+        const sent = await sendNotificationToUser(user);
+
+        if (sent) {
+            res.json({ message: 'Test email sent successfully! Please check your inbox.' });
+        } else {
+            res.json({ message: 'No alerts found based on your current settings (No Low Stock or Expiring items found).' });
+        }
+    } catch (error) {
+        console.error('Test notification error:', error);
+        res.status(500).json({ error: 'Failed to send test email.' });
     }
 });
 

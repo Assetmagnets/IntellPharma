@@ -56,6 +56,11 @@ model User {
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  profileImage    String?   @db.Text // Base64 image string
+  notificationSettings Json? // Stores email/alert preferences
+
+  // Stripe Integration
+  stripeCustomerId String?   @unique
 
   // Relationships
   ownedBranches   Branch[]  @relation("BranchOwner")
@@ -114,6 +119,11 @@ model Subscription {
   autoRenew       Boolean           @default(true)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+
+  // Stripe Integration
+  stripeSubscriptionId   String?    @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
 
   branch          Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
 }

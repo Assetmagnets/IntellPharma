@@ -32,7 +32,7 @@ export default function AIAssistant({ isLocked }) {
     const [messages, setMessages] = useState([
         {
             type: 'ai',
-            text: `Hello ${user.name}! I'm your Medistock AI assistant. How can I help you today?`,
+            text: `Hello ${user.name}! I'm your PharmaStock AI assistant. How can I help you today?`,
             timestamp: new Date()
         }
     ]);

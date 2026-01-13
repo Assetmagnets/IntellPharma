@@ -38,6 +38,10 @@ export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
     register: (userData) => api.post('/auth/register', userData),
     getProfile: () => api.get('/auth/me'),
+    updateProfile: (data) => api.put('/auth/update-profile', data),
+    verifyPassword: (password) => api.post('/auth/verify-password', { password }),
+    updateSettings: (settings) => api.put('/auth/update-settings', { notificationSettings: settings }),
+    testNotifications: () => api.post('/auth/test-notifications'),
     changePassword: (data) => api.post('/auth/change-password', data),
     // Forgot password APIs (Email OTP)
     requestPasswordReset: (email) => api.post('/auth/forgot-password/request-otp', { email }),
@@ -105,4 +109,13 @@ export const subscriptionAPI = {
     getBillingHistory: () => api.get('/subscription/billing-history')
 };
 
+// Stripe Payment APIs
+export const stripeAPI = {
+    createCheckoutSession: (planId) => api.post('/stripe/create-checkout-session', { planId }),
+    getSubscriptionStatus: () => api.get('/stripe/subscription-status'),
+    createPortalSession: () => api.post('/stripe/create-portal-session'),
+    verifySession: (sessionId) => api.get(`/stripe/verify-session/${sessionId}`)
+};
+
 export default api;
+

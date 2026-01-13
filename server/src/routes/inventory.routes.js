@@ -141,7 +141,13 @@ router.get('/:branchId', authenticate, requireBranchAccess, async (req, res) => 
         }
 
         if (expired === 'true') {
-            where.expiryDate = { lte: new Date() };
+            const sixtyDaysFromNow = new Date();
+            sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
+
+            where.expiryDate = {
+                gte: new Date(),
+                lte: sixtyDaysFromNow
+            };
         }
 
         const products = await prisma.product.findMany({
@@ -223,16 +229,47 @@ router.put('/:branchId/:productId', authenticate, authorize('OWNER', 'MANAGER', 
         const { branchId, productId } = req.params;
         const updateData = req.body;
 
+        // Parse expiry date properly
+        let parsedExpiryDate = undefined;
+        if (updateData.expiryDate !== undefined) {
+            if (updateData.expiryDate && updateData.expiryDate.trim() !== '') {
+                parsedExpiryDate = new Date(updateData.expiryDate + 'T00:00:00.000Z');
+            } else {
+                parsedExpiryDate = null; // Clear expiry if empty
+            }
+        }
+
+        // Determine active status based on quantity
+        let newIsActive = undefined;
+        if (updateData.quantity !== undefined) {
+            const qty = parseInt(updateData.quantity);
+            newIsActive = !isNaN(qty) && qty > 0;
+        }
+
+        // Prepare clean data object
+        const cleanData = {
+            name: updateData.name,
+            genericName: updateData.genericName,
+            manufacturer: updateData.manufacturer,
+            barcode: updateData.barcode,
+            batchNumber: updateData.batchNumber,
+            hsnCode: updateData.hsnCode,
+            unit: updateData.unit,
+            expiryDate: parsedExpiryDate,
+            mrp: updateData.mrp ? parseFloat(updateData.mrp) : undefined,
+            purchasePrice: updateData.purchasePrice ? parseFloat(updateData.purchasePrice) : undefined,
+            gstRate: updateData.gstRate !== undefined ? parseFloat(updateData.gstRate) : undefined, // Handle 0 correctly
+            quantity: updateData.quantity !== undefined ? parseInt(updateData.quantity) : undefined,
+            minStock: updateData.minStock ? parseInt(updateData.minStock) : undefined,
+            isActive: newIsActive
+        };
+
+        // Remove undefined keys to let Prisma keep existing values (except nulls which we want)
+        Object.keys(cleanData).forEach(key => cleanData[key] === undefined && delete cleanData[key]);
+
         const product = await prisma.product.update({
             where: { id: productId },
-            data: {
-                ...updateData,
-                mrp: updateData.mrp ? parseFloat(updateData.mrp) : undefined,
-                purchasePrice: updateData.purchasePrice ? parseFloat(updateData.purchasePrice) : undefined,
-                gstRate: updateData.gstRate ? parseFloat(updateData.gstRate) : undefined,
-                quantity: updateData.quantity !== undefined ? parseInt(updateData.quantity) : undefined,
-                minStock: updateData.minStock ? parseInt(updateData.minStock) : undefined
-            }
+            data: cleanData
         });
 
         await logAudit(req.user.id, branchId, 'UPDATE', 'Product', product.id, `Updated product: ${product.name}`, req.ip);
@@ -240,7 +277,7 @@ router.put('/:branchId/:productId', authenticate, authorize('OWNER', 'MANAGER', 
         res.json(product);
     } catch (error) {
         console.error('Update product error:', error);
-        res.status(500).json({ error: 'Failed to update product.' });
+        res.status(500).json({ error: 'Failed to update product. ' + error.message });
     }
 });
 
@@ -261,7 +298,10 @@ router.patch('/:branchId/:productId/stock', authenticate, authorize('OWNER', 'MA
 
         const product = await prisma.product.update({
             where: { id: productId },
-            data: { quantity: newQuantity }
+            data: {
+                quantity: newQuantity,
+                isActive: newQuantity > 0 // Deactivate if 0, Activate if > 0 (restock)
+            }
         });
 
         await logAudit(req.user.id, branchId, 'STOCK_UPDATE', 'Product', product.id,

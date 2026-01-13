@@ -409,17 +409,14 @@ export default function Inventory() {
 
                                     <div className="form-group">
                                         <label className="form-label">GST Rate (%)</label>
-                                        <select
+                                        <input
+                                            type="number"
+                                            step="0.01"
                                             className="form-input"
                                             value={formData.gstRate}
                                             onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
-                                        >
-                                            <option value="0">0%</option>
-                                            <option value="5">5%</option>
-                                            <option value="12">12%</option>
-                                            <option value="18">18%</option>
-                                            <option value="28">28%</option>
-                                        </select>
+                                            placeholder="Enter GST %"
+                                        />
                                     </div>
 
                                     <div className="form-group">

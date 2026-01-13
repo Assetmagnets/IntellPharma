@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI, subscriptionAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
@@ -12,23 +13,28 @@ import {
     CreditCard,
     Plus,
     Eye,
-    EyeOff
+    EyeOff,
+    Trash2,
+    Send
 } from 'lucide-react';
 import '../styles/settings.css';
 
 export default function Settings() {
     const { user, currentBranch } = useAuth();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('profile');
     const [profileData, setProfileData] = useState({
         name: '',
         email: '',
-        phone: ''
+        phone: '',
+        role: ''
     });
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
     });
+    const [isPasswordVerified, setIsPasswordVerified] = useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -50,8 +56,15 @@ export default function Settings() {
             setProfileData({
                 name: user.name || '',
                 email: user.email || '',
-                phone: user.phone || ''
+                phone: user.phone || '',
+                role: user.role || '',
+                profileImage: user.profileImage || null
             });
+
+            // Load saved notification settings from user profile if available
+            if (user.notificationSettings) {
+                setNotificationSettings(user.notificationSettings);
+            }
         }
     }, [user]);
 
@@ -59,10 +72,27 @@ export default function Settings() {
         e.preventDefault();
         setSaving(true);
         try {
-            // In production, this would call an update profile API
+            const { data } = await authAPI.updateProfile(profileData);
             alert('Profile updated successfully!');
+            // Update local user state if context allows (optional, but good practice)
         } catch (error) {
+            console.error(error);
             alert(error.response?.data?.error || 'Failed to update profile');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleVerifyPassword = async () => {
+        try {
+            setSaving(true);
+            await authAPI.verifyPassword(passwordData.currentPassword);
+            setIsPasswordVerified(true);
+            alert("Password verified successfully!");
+        } catch (error) {
+            console.error(error);
+            alert(error.response?.data?.error || 'Incorrect password');
+            setIsPasswordVerified(false);
         } finally {
             setSaving(false);
         }
@@ -99,10 +129,12 @@ export default function Settings() {
     const handleSettingsSave = async () => {
         setSaving(true);
         try {
-            // In production, this would call an update settings API
-            await new Promise(resolve => setTimeout(resolve, 500));
-            alert('Settings saved!');
+            await authAPI.updateSettings(notificationSettings);
+            alert('Settings saved successfully!');
+            // Update local user state in context/localStorage if needed
+            // Ideally, authContext should be updated here, but for now we rely on next reload or re-fetch
         } catch (error) {
+            console.error(error);
             alert('Failed to save settings');
         } finally {
             setSaving(false);
@@ -160,9 +192,49 @@ export default function Settings() {
                     <div className="settings-content">
                         {/* Profile Tab */}
                         {activeTab === 'profile' && (
-                            <div className="settings-section glass-panel">
+                            <div className="settings-section profile-card">
                                 <h2>Profile Information</h2>
                                 <p className="section-desc">Update your personal details</p>
+
+                                <div className="profile-header-section">
+                                    <div className="profile-image-container">
+                                        <div className="avatar-circle">
+                                            {profileData.profileImage ? (
+                                                <img src={profileData.profileImage} alt="Profile" className="avatar-image" />
+                                            ) : (
+                                                profileData.name.charAt(0).toUpperCase()
+                                            )}
+                                        </div>
+
+                                        <label htmlFor="profile-image-upload" className="edit-avatar-btn" title="Change Photo">
+                                            <Plus size={18} />
+                                        </label>
+                                        <input
+                                            id="profile-image-upload"
+                                            type="file"
+                                            accept="image/*"
+                                            style={{ display: 'none' }}
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    if (file.size > 2 * 1024 * 1024) {
+                                                        alert("Image size should be less than 2MB");
+                                                        return;
+                                                    }
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setProfileData({ ...profileData, profileImage: reader.result });
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="profile-info">
+                                        <h3>{profileData.name || 'User'}</h3>
+                                        <p>{profileData.role || 'Role'}</p>
+                                    </div>
+                                </div>
 
                                 <form onSubmit={handleProfileUpdate}>
                                     <div className="form-group">
@@ -211,107 +283,136 @@ export default function Settings() {
                                 <form onSubmit={handlePasswordChange}>
                                     <div className="form-group">
                                         <label className="form-label">Current Password</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type={showCurrentPassword ? "text" : "password"}
-                                                className="form-input"
-                                                value={passwordData.currentPassword}
-                                                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                                                required
-                                                style={{ paddingRight: '2.5rem' }}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: '0.75rem',
-                                                    top: '50%',
-                                                    transform: 'translateY(-50%)',
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: 'var(--text-secondary)',
-                                                    cursor: 'pointer',
-                                                    padding: '0',
-                                                    display: 'flex',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </button>
+                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                            <div style={{ position: 'relative', flex: 1 }}>
+                                                <input
+                                                    type={showCurrentPassword ? "text" : "password"}
+                                                    className="form-input"
+                                                    value={passwordData.currentPassword}
+                                                    onChange={(e) => {
+                                                        setPasswordData({ ...passwordData, currentPassword: e.target.value });
+                                                        setIsPasswordVerified(false); // Reset verification on change
+                                                    }}
+                                                    disabled={isPasswordVerified}
+                                                    required
+                                                    style={{ paddingRight: '2.5rem' }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        right: '0.75rem',
+                                                        top: '50%',
+                                                        transform: 'translateY(-50%)',
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        color: 'var(--text-secondary)',
+                                                        cursor: 'pointer',
+                                                        padding: '0',
+                                                        display: 'flex',
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
+                                            </div>
+                                            {!isPasswordVerified ? (
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary"
+                                                    onClick={handleVerifyPassword}
+                                                    disabled={!passwordData.currentPassword || saving}
+                                                >
+                                                    {saving ? 'Verifying...' : 'Verify'}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-success"
+                                                    disabled
+                                                    style={{ backgroundColor: 'var(--success)', color: 'white', borderColor: 'var(--success)' }}
+                                                >
+                                                    Verified
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
-                                    <div className="form-group">
-                                        <label className="form-label">New Password</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type={showNewPassword ? "text" : "password"}
-                                                className="form-input"
-                                                value={passwordData.newPassword}
-                                                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                                                required
-                                                minLength={6}
-                                                style={{ paddingRight: '2.5rem' }}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowNewPassword(!showNewPassword)}
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: '0.75rem',
-                                                    top: '50%',
-                                                    transform: 'translateY(-50%)',
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: 'var(--text-secondary)',
-                                                    cursor: 'pointer',
-                                                    padding: '0',
-                                                    display: 'flex',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    {isPasswordVerified && (
+                                        <div className="animate-slideUp">
+                                            <div className="form-group">
+                                                <label className="form-label">New Password</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <input
+                                                        type={showNewPassword ? "text" : "password"}
+                                                        className="form-input"
+                                                        value={passwordData.newPassword}
+                                                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                                        required
+                                                        minLength={6}
+                                                        style={{ paddingRight: '2.5rem' }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            right: '0.75rem',
+                                                            top: '50%',
+                                                            transform: 'translateY(-50%)',
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            color: 'var(--text-secondary)',
+                                                            cursor: 'pointer',
+                                                            padding: '0',
+                                                            display: 'flex',
+                                                            alignItems: 'center'
+                                                        }}
+                                                    >
+                                                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="form-label">Confirm New Password</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <input
+                                                        type={showConfirmPassword ? "text" : "password"}
+                                                        className="form-input"
+                                                        value={passwordData.confirmPassword}
+                                                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                                        required
+                                                        style={{ paddingRight: '2.5rem' }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            right: '0.75rem',
+                                                            top: '50%',
+                                                            transform: 'translateY(-50%)',
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            color: 'var(--text-secondary)',
+                                                            cursor: 'pointer',
+                                                            padding: '0',
+                                                            display: 'flex',
+                                                            alignItems: 'center'
+                                                        }}
+                                                    >
+                                                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" className="btn btn-primary" disabled={saving}>
+                                                {saving ? 'Changing...' : 'Change Password'}
                                             </button>
                                         </div>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label className="form-label">Confirm New Password</label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type={showConfirmPassword ? "text" : "password"}
-                                                className="form-input"
-                                                value={passwordData.confirmPassword}
-                                                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                                                required
-                                                style={{ paddingRight: '2.5rem' }}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: '0.75rem',
-                                                    top: '50%',
-                                                    transform: 'translateY(-50%)',
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: 'var(--text-secondary)',
-                                                    cursor: 'pointer',
-                                                    padding: '0',
-                                                    display: 'flex',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <button type="submit" className="btn btn-primary" disabled={saving}>
-                                        {saving ? 'Changing...' : 'Change Password'}
-                                    </button>
+                                    )}
                                 </form>
 
                                 <div className="security-info">
@@ -397,9 +498,18 @@ export default function Settings() {
                                     </div>
                                 </div>
 
-                                <button className="btn btn-primary" onClick={handleSettingsSave} disabled={saving}>
-                                    {saving ? 'Saving...' : 'Save Preferences'}
-                                </button>
+                                <div className="section-actions" style={{
+                                    marginTop: '2rem',
+                                    paddingTop: '2rem',
+                                    borderTop: '1px solid var(--dark-border)',
+                                    display: 'flex',
+                                    justifyContent: 'flex-start',
+                                    alignItems: 'center'
+                                }}>
+                                    <button className="btn btn-primary" onClick={handleSettingsSave} disabled={saving}>
+                                        {saving ? 'Saving...' : 'Save Preferences'}
+                                    </button>
+                                </div>
                             </div>
                         )}
 

@@ -6,10 +6,10 @@ export default function ProtectedRoute({ children, roles }) {
 
     if (loading) {
         return (
-            <div className="loading-page gradient-mesh">
+            <div className="loading-container">
                 <div className="loading-content">
-                    <div className="spinner spinner-lg"></div>
-                    <p>Loading...</p>
+                    <img src="/medistock-logo-full.png" alt="MediStock" className="loading-logo" />
+                    <div className="spinner spinner-lg text-primary"></div>
                 </div>
             </div>
         );

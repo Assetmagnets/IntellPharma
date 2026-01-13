@@ -28,8 +28,8 @@ export default function Landing() {
             {/* Navbar */}
             <nav className="landing-nav">
                 <div className="nav-brand">
-                    <img src="/logo.png" alt="MediStock" className="brand-logo" />
-                    <span className="brand-text">MediStock</span>
+                    <img src="/logo.png" alt="PharmaStock" className="brand-logo" />
+                    <span className="brand-text">PharmaStock</span>
                 </div>
                 <div className="nav-links">
                     {isAuthenticated ? (
@@ -60,7 +60,7 @@ export default function Landing() {
                         <span className="gradient-text"> Pharmacy Business</span>
                     </h1>
                     <p className="hero-description">
-                        Medistock is the complete multi-branch pharmacy governance and sales system.
+                        PharmaStock is the complete multi-branch pharmacy governance and sales system.
                         Manage inventory, billing, GST compliance, and get AI-driven insights - all in one platform.
                     </p>
                     <div className="hero-actions">
@@ -183,7 +183,7 @@ export default function Landing() {
             <section className="cta-section">
                 <div className="cta-content">
                     <h2>Ready to Get Started?</h2>
-                    <p>Join thousands of pharmacies already using Medistock</p>
+                    <p>Join thousands of pharmacies already using PharmaStock</p>
                     <Link to="/register" className="btn btn-primary btn-lg">
                         Start Your Free Trial
                     </Link>
@@ -194,10 +194,10 @@ export default function Landing() {
             <footer className="landing-footer">
                 <div className="footer-content">
                     <div className="footer-brand">
-                        <img src="/logo.png" alt="MediStock" className="footer-logo" />
-                        <span>MediStock</span>
+                        <img src="/logo.png" alt="PharmaStock" className="footer-logo" />
+                        <span>PharmaStock</span>
                     </div>
-                    <p>© {new Date().getFullYear()} Medistock. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} PharmaStock. All rights reserved.</p>
                 </div>
             </footer>
         </div>

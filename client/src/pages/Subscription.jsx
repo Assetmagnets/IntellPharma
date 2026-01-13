@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { subscriptionAPI } from '../services/api';
+import { subscriptionAPI, stripeAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import {
@@ -15,7 +16,9 @@ import {
     CreditCard,
     Smartphone,
     Landmark,
-    Wallet
+    Wallet,
+    ExternalLink,
+    Settings
 } from 'lucide-react';
 import '../styles/subscription.css';
 
@@ -23,27 +26,51 @@ export default function Subscription() {
     const { user, branches } = useAuth();
     const [plans, setPlans] = useState([]);
     const [currentSub, setCurrentSub] = useState(null);
+    const [stripeStatus, setStripeStatus] = useState(null);
     const [extraBranchPrice, setExtraBranchPrice] = useState(500);
     const [loading, setLoading] = useState(true);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState(null);
-    const [processing, setProcessing] = useState(false);
+    const [processing, setProcessing] = useState(null); // Track which plan is processing
+    const [searchParams] = useSearchParams();
+
+    // Plan tier order for comparison
+    const PLAN_TIERS = { BASIC: 0, PRO: 1, PREMIUM: 2, ENTERPRISE: 3 };
 
     useEffect(() => {
         loadSubscriptionData();
     }, []);
 
+    // Reload data when returning from payment success
+    useEffect(() => {
+        if (searchParams.get('refresh') === 'true') {
+            loadSubscriptionData();
+            // Remove the refresh param from URL
+            window.history.replaceState({}, '', '/subscription');
+        }
+    }, [searchParams]);
+
     const loadSubscriptionData = async () => {
         setLoading(true);
         try {
-            const [plansRes, currentRes] = await Promise.all([
-                subscriptionAPI.getPlans(),
-                subscriptionAPI.getCurrent()
-            ]);
-
+            // First get plans
+            const plansRes = await subscriptionAPI.getPlans();
             setPlans(plansRes.data.plans || []);
             setExtraBranchPrice(plansRes.data.extraBranchPrice || 500);
+
+            // Call Stripe status FIRST - this syncs the database
+            let stripeRes = { data: null };
+            try {
+                stripeRes = await stripeAPI.getSubscriptionStatus();
+                setStripeStatus(stripeRes.data);
+            } catch (err) {
+                console.log('Stripe status check failed:', err);
+            }
+
+            // THEN get current subscription (now it has synced data)
+            const currentRes = await subscriptionAPI.getCurrent();
             setCurrentSub(currentRes.data);
+
         } catch (error) {
             console.error('Load subscription error:', error);
         } finally {
@@ -51,18 +78,42 @@ export default function Subscription() {
         }
     };
 
-    const handleUpgrade = async () => {
-        if (!selectedPlan) return;
+    const handleStripeCheckout = async (plan) => {
+        if (plan.price === 0) {
+            alert('Basic plan is free. No payment required!');
+            return;
+        }
 
+        if (plan.id === 'ENTERPRISE') {
+            alert('Please contact sales@medistock.com for Enterprise pricing.');
+            return;
+        }
+
+        setProcessing(plan.id);
+        try {
+            const response = await stripeAPI.createCheckoutSession(plan.id);
+
+            // Redirect to Stripe Checkout
+            if (response.data.url) {
+                window.location.href = response.data.url;
+            }
+        } catch (error) {
+            console.error('Checkout error:', error);
+            alert(error.response?.data?.error || 'Failed to start checkout. Please try again.');
+            setProcessing(null);
+        }
+    };
+
+    const handleManageBilling = async () => {
         setProcessing(true);
         try {
-            await subscriptionAPI.upgrade({ plan: selectedPlan.id });
-            setShowUpgradeModal(false);
-            loadSubscriptionData();
-            alert('Subscription upgraded successfully!');
+            const response = await stripeAPI.createPortalSession();
+            if (response.data.url) {
+                window.location.href = response.data.url;
+            }
         } catch (error) {
-            alert(error.response?.data?.error || 'Failed to upgrade');
-        } finally {
+            console.error('Portal error:', error);
+            alert(error.response?.data?.error || 'Failed to open billing portal.');
             setProcessing(false);
         }
     };
@@ -106,7 +157,29 @@ export default function Subscription() {
     };
 
     const isCurrentPlan = (planId) => {
-        return currentSub?.plan === planId;
+        return currentSub?.plan === planId || stripeStatus?.plan === planId;
+    };
+
+    const getCurrentPlanTier = () => {
+        const currentPlan = stripeStatus?.plan || currentSub?.plan || 'BASIC';
+        return PLAN_TIERS[currentPlan] || 0;
+    };
+
+    const isLowerOrEqualPlan = (planId) => {
+        return PLAN_TIERS[planId] <= getCurrentPlanTier();
+    };
+
+    const hasActiveStripeSubscription = () => {
+        return stripeStatus?.hasSubscription && stripeStatus?.status === 'active';
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
     };
 
     return (
@@ -135,10 +208,32 @@ export default function Subscription() {
                                         </div>
                                         <span className="plan-name">{currentSub.planDetails?.name || currentSub.plan}</span>
                                     </div>
-                                    {currentSub.autoRenew && (
-                                        <span className="auto-renew-badge">Auto-Renew ON</span>
-                                    )}
+                                    <div className="plan-status-badges">
+                                        {hasActiveStripeSubscription() && (
+                                            <span className="stripe-active-badge">
+                                                <CheckCircle size={14} /> Stripe Active
+                                            </span>
+                                        )}
+                                        {currentSub.autoRenew && (
+                                            <span className="auto-renew-badge">Auto-Renew ON</span>
+                                        )}
+                                    </div>
                                 </div>
+
+                                {/* Stripe Subscription Details */}
+                                {hasActiveStripeSubscription() && (
+                                    <div className="stripe-info">
+                                        <div className="stripe-detail">
+                                            <span className="label">Next billing date:</span>
+                                            <span className="value">{formatDate(stripeStatus.currentPeriodEnd)}</span>
+                                        </div>
+                                        {stripeStatus.cancelAtPeriodEnd && (
+                                            <div className="stripe-warning">
+                                                ⚠️ Subscription will cancel at period end
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="plan-usage">
                                     <div className="usage-item">
@@ -167,10 +262,19 @@ export default function Subscription() {
                                 </div>
 
                                 <div className="plan-actions">
+                                    {hasActiveStripeSubscription() && (
+                                        <button
+                                            className="btn btn-secondary"
+                                            onClick={handleManageBilling}
+                                            disabled={processing}
+                                        >
+                                            <Settings size={16} /> Manage Billing
+                                        </button>
+                                    )}
                                     <button className="btn btn-secondary" onClick={handleAddBranches}>
                                         + Add Extra Branches (₹{extraBranchPrice}/mo each)
                                     </button>
-                                    {currentSub.autoRenew && (
+                                    {currentSub.autoRenew && !hasActiveStripeSubscription() && (
                                         <button className="btn btn-ghost" onClick={handleCancelRenewal}>
                                             Cancel Auto-Renewal
                                         </button>
@@ -221,22 +325,32 @@ export default function Subscription() {
                                     </ul>
 
                                     {isCurrentPlan(plan.id) ? (
-                                        <button className="btn btn-secondary w-full" disabled>
-                                            Current Plan
+                                        <button className="btn btn-success w-full" disabled>
+                                            ✓ Current Plan
                                         </button>
                                     ) : plan.id === 'ENTERPRISE' ? (
                                         <button className="btn btn-secondary w-full" onClick={() => alert('Contact sales@medistock.com for Enterprise pricing')}>
                                             Contact Sales
                                         </button>
+                                    ) : isLowerOrEqualPlan(plan.id) ? (
+                                        <button className="btn btn-secondary w-full" disabled>
+                                            {plan.price === 0 ? 'Free Plan' : 'Included in Current Plan'}
+                                        </button>
                                     ) : (
                                         <button
                                             className="btn btn-primary w-full"
-                                            onClick={() => {
-                                                setSelectedPlan(plan);
-                                                setShowUpgradeModal(true);
-                                            }}
+                                            onClick={() => handleStripeCheckout(plan)}
+                                            disabled={processing !== null}
                                         >
-                                            {plan.price > (currentSub?.planDetails?.price || 0) ? 'Upgrade' : 'Switch'} to {plan.name}
+                                            {processing === plan.id ? (
+                                                <>
+                                                    <Loader2 className="animate-spin" size={16} /> Processing...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CreditCard size={16} /> Upgrade to {plan.name}
+                                                </>
+                                            )}
                                         </button>
                                     )}
                                 </div>
@@ -247,15 +361,15 @@ export default function Subscription() {
                         <div className="payment-section glass-panel">
                             <h3>
                                 <Wallet size={20} />
-                                Payment Methods
+                                Secure Payment with Stripe
                             </h3>
-                            <p className="section-desc">Secure payments powered by Razorpay/Stripe</p>
+                            <p className="section-desc">Your payment is securely processed by Stripe. We never store your card details.</p>
 
                             <div className="payment-icons">
-                                <span className="payment-icon"><CreditCard size={16} /> Cards</span>
-                                <span className="payment-icon"><Smartphone size={16} /> UPI</span>
+                                <span className="payment-icon"><CreditCard size={16} /> Visa</span>
+                                <span className="payment-icon"><CreditCard size={16} /> Mastercard</span>
+                                <span className="payment-icon"><CreditCard size={16} /> Amex</span>
                                 <span className="payment-icon"><Landmark size={16} /> Net Banking</span>
-                                <span className="payment-icon"><Wallet size={16} /> Wallets</span>
                             </div>
 
                             <div className="billing-info">
@@ -263,74 +377,20 @@ export default function Subscription() {
                                     <strong>Billing Cycle:</strong> Monthly, auto-renewed on the same date
                                 </p>
                                 <p>
-                                    <strong>Upgrades:</strong> Prorated credit applied from current plan
+                                    <strong>Upgrades:</strong> Take effect immediately with prorated billing
                                 </p>
                                 <p>
-                                    <strong>Downgrades:</strong> Takes effect from next billing cycle
+                                    <strong>Cancellation:</strong> Cancel anytime from the billing portal
                                 </p>
+                            </div>
+
+                            <div className="stripe-badge">
+                                <span>Powered by</span>
+                                <strong>Stripe</strong>
+                                <ExternalLink size={14} />
                             </div>
                         </div>
                     </>
-                )}
-
-                {/* Upgrade Modal */}
-                {showUpgradeModal && selectedPlan && (
-                    <div className="modal-overlay" onClick={() => setShowUpgradeModal(false)}>
-                        <div className="modal upgrade-modal" onClick={e => e.stopPropagation()}>
-                            <div className="modal-header">
-                                <h2>Upgrade to {selectedPlan.name}</h2>
-                                <button className="modal-close" onClick={() => setShowUpgradeModal(false)}>
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            <div className="upgrade-summary">
-                                <div className="upgrade-from">
-                                    <span className="upgrade-label">Current Plan</span>
-                                    <span className="upgrade-value">{currentSub?.planDetails?.name || 'Basic'}</span>
-                                </div>
-                                <span className="upgrade-arrow">
-                                    <ArrowRight size={24} />
-                                </span>
-                                <div className="upgrade-to">
-                                    <span className="upgrade-label">New Plan</span>
-                                    <span className="upgrade-value">{selectedPlan.name}</span>
-                                </div>
-                            </div>
-
-                            <div className="upgrade-price">
-                                <span>Monthly Price:</span>
-                                <span className="price">{formatCurrency(selectedPlan.price)}</span>
-                            </div>
-
-                            <div className="upgrade-features">
-                                <h4>You'll Get:</h4>
-                                <ul>
-                                    {getPlanFeatures(selectedPlan).map((feature, idx) => (
-                                        <li key={idx}>
-                                            <Check size={16} className="inline-block mr-1" /> {feature}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <div className="modal-actions">
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => setShowUpgradeModal(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={handleUpgrade}
-                                    disabled={processing}
-                                >
-                                    {processing ? 'Processing...' : 'Confirm Upgrade'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 )}
             </main>
         </div>

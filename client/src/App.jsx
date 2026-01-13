@@ -16,6 +16,8 @@ import Subscription from './pages/Subscription';
 import Branches from './pages/Branches';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentCancel from './pages/PaymentCancel';
 
 // Styles
 import './index.css';
@@ -103,6 +105,25 @@ function App() {
               element={
                 <ProtectedRoute roles={['OWNER', 'MANAGER']}>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Payment Result Routes */}
+            <Route
+              path="/payment-success"
+              element={
+                <ProtectedRoute roles={['OWNER']}>
+                  <PaymentSuccess />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/payment-cancel"
+              element={
+                <ProtectedRoute roles={['OWNER']}>
+                  <PaymentCancel />
                 </ProtectedRoute>
               }
             />

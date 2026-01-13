@@ -1,5 +1,5 @@
 /* =====================================================
-   MEDISTOCK - DESIGN SYSTEM
+   PHARMASTOCK - DESIGN SYSTEM
    Premium Pharmacy Management System
    ===================================================== */
 
@@ -51,13 +51,13 @@
   --gray-800: #1f2937;
   --gray-900: #111827;
 
-  /* Dark Mode Colors */
-  --dark-bg: #0f172a;
-  --dark-surface: #1e293b;
-  --dark-surface-2: #334155;
-  --dark-border: #475569;
-  --dark-text: #f8fafc;
-  --dark-text-secondary: #94a3b8;
+  /* Dark Mode Colors - True Black */
+  --dark-bg: #000000;
+  --dark-surface: #0f0f0f;
+  --dark-surface-2: #1a1a1a;
+  --dark-border: #2e2e2e;
+  --dark-text: #f0f0f0;
+  --dark-text-secondary: #9e9e9e;
 
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.1);
