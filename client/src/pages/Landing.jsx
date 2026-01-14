@@ -28,8 +28,8 @@ export default function Landing() {
             {/* Navbar */}
             <nav className="landing-nav">
                 <div className="nav-brand">
-                    <img src="/logo.png" alt="PharmaStock" className="brand-logo" />
-                    <span className="brand-text">PharmaStock</span>
+                    <img src="/logo.png" alt="IntellPharma" className="brand-logo" />
+                    <span className="brand-text">IntellPharma</span>
                 </div>
                 <div className="nav-links">
                     {isAuthenticated ? (
@@ -194,10 +194,10 @@ export default function Landing() {
             <footer className="landing-footer">
                 <div className="footer-content">
                     <div className="footer-brand">
-                        <img src="/logo.png" alt="PharmaStock" className="footer-logo" />
-                        <span>PharmaStock</span>
+                        <img src="/logo.png" alt="IntellPharma" className="footer-logo" />
+                        <span>IntellPharma</span>
                     </div>
-                    <p>© {new Date().getFullYear()} PharmaStock. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} IntellPharma. All rights reserved.</p>
                 </div>
             </footer>
         </div>

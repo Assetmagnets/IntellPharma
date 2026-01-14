@@ -8,13 +8,13 @@ import AIPromptBox from '../components/AIPromptBox';
 import {
     Home,
     IndianRupee,
-    Receipt,
     Package,
     Clock,
     Sparkles,
     PackagePlus,
     AlertTriangle,
-    BarChart3
+    BarChart3,
+    ReceiptIndianRupeeIcon
 } from 'lucide-react';
 import '../styles/dashboard.css';
 
@@ -124,7 +124,7 @@ export default function Dashboard() {
                             )}
 
                             <StatsCard
-                                icon={Receipt}
+                                icon={ReceiptIndianRupeeIcon}
                                 iconBg="gradient-accent"
                                 label="Invoices Today"
                                 value={stats.invoiceCount}
@@ -168,7 +168,7 @@ export default function Dashboard() {
                             <h2>Quick Actions</h2>
                             <div className="quick-actions">
                                 <button className="action-card glass-card" onClick={() => window.location.href = '/billing'}>
-                                    <Receipt className="action-icon" size={32} />
+                                    <ReceiptIndianRupeeIcon className="action-icon" size={32} color='green'/>
                                     <span className="action-label">New Invoice</span>
                                 </button>
                                 <button className="action-card glass-card" onClick={() => window.location.href = '/inventory'}>
@@ -176,7 +176,7 @@ export default function Dashboard() {
                                     <span className="action-label">Add Product</span>
                                 </button>
                                 <button className="action-card glass-card" onClick={() => window.location.href = '/inventory?filter=low-stock'}>
-                                    <AlertTriangle className="action-icon" size={32} />
+                                    <AlertTriangle className="action-icon" size={32} color='red'/>
                                     <span className="action-label">Low Stock</span>
                                 </button>
                                 <button className="action-card glass-card" onClick={() => window.location.href = '/reports'}>

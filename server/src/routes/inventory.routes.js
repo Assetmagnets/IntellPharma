@@ -180,7 +180,8 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'INVENTORY
             hsnCode,
             quantity,
             minStock,
-            unit
+            unit,
+            tabletsPerStrip
         } = req.body;
 
         // Validate required fields
@@ -207,9 +208,10 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'INVENTORY
                 purchasePrice: parseFloat(purchasePrice),
                 gstRate: parseFloat(gstRate || 12),
                 hsnCode: hsnCode?.trim() || null,
-                quantity: parseInt(quantity || 0),
+                quantity: parseFloat(quantity || 0),
                 minStock: parseInt(minStock || 10),
                 unit: unit?.trim() || 'Pcs',
+                tabletsPerStrip: parseInt(tabletsPerStrip || 10),
                 branchId
             }
         });
@@ -242,7 +244,7 @@ router.put('/:branchId/:productId', authenticate, authorize('OWNER', 'MANAGER', 
         // Determine active status based on quantity
         let newIsActive = undefined;
         if (updateData.quantity !== undefined) {
-            const qty = parseInt(updateData.quantity);
+            const qty = parseFloat(updateData.quantity);
             newIsActive = !isNaN(qty) && qty > 0;
         }
 
@@ -255,11 +257,12 @@ router.put('/:branchId/:productId', authenticate, authorize('OWNER', 'MANAGER', 
             batchNumber: updateData.batchNumber,
             hsnCode: updateData.hsnCode,
             unit: updateData.unit,
+            tabletsPerStrip: updateData.tabletsPerStrip ? parseInt(updateData.tabletsPerStrip) : undefined,
             expiryDate: parsedExpiryDate,
             mrp: updateData.mrp ? parseFloat(updateData.mrp) : undefined,
             purchasePrice: updateData.purchasePrice ? parseFloat(updateData.purchasePrice) : undefined,
             gstRate: updateData.gstRate !== undefined ? parseFloat(updateData.gstRate) : undefined, // Handle 0 correctly
-            quantity: updateData.quantity !== undefined ? parseInt(updateData.quantity) : undefined,
+            quantity: updateData.quantity !== undefined ? parseFloat(updateData.quantity) : undefined,
             minStock: updateData.minStock ? parseInt(updateData.minStock) : undefined,
             isActive: newIsActive
         };
@@ -291,9 +294,9 @@ router.patch('/:branchId/:productId/stock', authenticate, authorize('OWNER', 'MA
 
         let newQuantity;
         if (operation === 'add') {
-            newQuantity = currentProduct.quantity + parseInt(quantity);
+            newQuantity = Number(currentProduct.quantity) + parseFloat(quantity);
         } else {
-            newQuantity = parseInt(quantity);
+            newQuantity = parseFloat(quantity);
         }
 
         const product = await prisma.product.update({

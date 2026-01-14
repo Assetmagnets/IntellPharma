@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { billingAPI, branchAPI, stripeAPI, subscriptionAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
@@ -34,6 +35,7 @@ import '../styles/reports.css';
 
 export default function Reports() {
     const { currentBranch, branches, hasRole } = useAuth();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('sales');
     const [dateRange, setDateRange] = useState({
         startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
@@ -45,6 +47,17 @@ export default function Reports() {
     const [loading, setLoading] = useState(true);
     const [showTemplateModal, setShowTemplateModal] = useState(false);
     const [subscriptionPlan, setSubscriptionPlan] = useState('BASIC');
+
+    // Function to handle export checks
+    const checkAccessAndExecute = (action) => {
+        if (!['PRO', 'PREMIUM', 'ENTERPRISE'].includes(subscriptionPlan)) {
+            alert('Upgrade to Premium to access detailed reports');
+            navigate('/subscription');
+            return;
+        }
+        action();
+    };
+
     const [generatedBlobUrl, setGeneratedBlobUrl] = useState(null);
     const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
     const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -1027,17 +1040,16 @@ export default function Reports() {
     ];
 
     const handleGenerateClick = () => {
-        // If basic plan, generate immediately without modal (or could show basic preview)
+        // Strict check: Redirect if not paid plan
         if (!['PRO', 'PREMIUM', 'ENTERPRISE'].includes(subscriptionPlan)) {
-            const doc = generateBasicPDF(true);
-            const blob = doc.output('bloburl');
-            setGeneratedBlobUrl(blob);
-            setToastMsg('Report generated! Click Download to save.');
-        } else {
-            // Premium: Show modal
-            setViewMode('grid');
-            setShowTemplateModal(true);
+            alert('Upgrade to Premium to generate professional reports');
+            navigate('/subscription');
+            return;
         }
+
+        // Premium: Show modal
+        setViewMode('grid');
+        setShowTemplateModal(true);
     };
 
     const handleTemplateSelect = (template) => {
@@ -1300,11 +1312,11 @@ export default function Reports() {
                                         </div>
                                     </div>
                                     <div className="export-actions">
-                                        <button className="btn btn-primary" onClick={() => exportReport('GSTR-1')}>
+                                        <button className="btn btn-primary" onClick={() => checkAccessAndExecute(() => exportReport('GSTR-1'))}>
                                             <Download size={18} />
                                             Generate GSTR-1
                                         </button>
-                                        <button className="btn btn-primary" onClick={() => exportReport('GSTR-3B')}>
+                                        <button className="btn btn-primary" onClick={() => checkAccessAndExecute(() => exportReport('GSTR-3B'))}>
                                             <Download size={18} />
                                             Generate GSTR-3B
                                         </button>

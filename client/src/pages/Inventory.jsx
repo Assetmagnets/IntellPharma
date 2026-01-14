@@ -39,7 +39,8 @@ export default function Inventory() {
         hsnCode: '',
         quantity: '',
         minStock: '10',
-        unit: 'Pcs'
+        unit: 'Strip',
+        tabletsPerStrip: '10'
     });
 
     useEffect(() => {
@@ -51,11 +52,35 @@ export default function Inventory() {
     const loadProducts = async () => {
         setLoading(true);
         try {
-            let params = { search: searchQuery };
-            if (filter === 'low-stock') params.lowStock = 'true';
-            if (filter === 'expiring') params.expired = 'true';
+            let res;
+            // Use specific endpoints for filters to ensure correct logic (e.g. SQL comparison for low stock)
+            if (filter === 'low-stock') {
+                res = await inventoryAPI.getLowStock(currentBranch?.id);
+                // Apply client-side search for these specific endpoints as they don't support backend search params yet
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    res.data = res.data.filter(p =>
+                        p.name.toLowerCase().includes(query) ||
+                        p.barcode?.includes(query) ||
+                        p.genericName?.toLowerCase().includes(query)
+                    );
+                }
+            } else if (filter === 'expiring') {
+                res = await inventoryAPI.getExpiring(currentBranch?.id);
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    res.data = res.data.filter(p =>
+                        p.name.toLowerCase().includes(query) ||
+                        p.barcode?.includes(query) ||
+                        p.genericName?.toLowerCase().includes(query)
+                    );
+                }
+            } else {
+                // Default 'all' filter uses the standard search endpoint
+                const params = { search: searchQuery };
+                res = await inventoryAPI.getProducts(currentBranch?.id, params);
+            }
 
-            const res = await inventoryAPI.getProducts(currentBranch?.id, params);
             setProducts(res.data || []);
         } catch (error) {
             console.error('Load products error:', error);
@@ -85,7 +110,8 @@ export default function Inventory() {
             hsnCode: '',
             quantity: '',
             minStock: '10',
-            unit: 'Pcs'
+            unit: 'Strip',
+            tabletsPerStrip: '10'
         });
         setShowModal(true);
     };
@@ -105,7 +131,8 @@ export default function Inventory() {
             hsnCode: product.hsnCode || '',
             quantity: product.quantity || '',
             minStock: product.minStock || '10',
-            unit: product.unit || 'Pcs'
+            unit: product.unit || 'Strip',
+            tabletsPerStrip: product.tabletsPerStrip || '10'
         });
         setShowModal(true);
     };
@@ -140,6 +167,20 @@ export default function Inventory() {
             style: 'currency',
             currency: 'INR'
         }).format(amount);
+    };
+
+    const formatStockDisplay = (product) => {
+        if (product.unit === 'Strip' || product.unit === 'Box' || product.tabletsPerStrip > 1) {
+            const total = Number(product.quantity);
+            const strips = Math.floor(total);
+            const looseFraction = total - strips;
+            // E.g. 0.5 * 10 = 5 tabs. Round to handle floating point errors
+            const looseTabs = Math.round(looseFraction * (product.tabletsPerStrip || 10));
+
+            if (looseTabs === 0) return `${strips} ${product.unit}`;
+            return `${strips} ${product.unit}, ${looseTabs} Tabs`;
+        }
+        return `${Number(product.quantity)} ${product.unit}`;
     };
 
     const getStockStatus = (product) => {
@@ -262,8 +303,7 @@ export default function Inventory() {
                                             </td>
                                             <td><code>{product.barcode || '-'}</code></td>
                                             <td>
-                                                <span className="stock-qty">{product.quantity}</span>
-                                                <span className="stock-unit"> {product.unit}</span>
+                                                <span className="stock-qty">{formatStockDisplay(product)}</span>
                                             </td>
                                             <td>{formatCurrency(product.mrp)}</td>
                                             <td>{product.gstRate}%</td>
@@ -449,6 +489,35 @@ export default function Inventory() {
                                             onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
                                         />
                                     </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Unit</label>
+                                        <select
+                                            className="form-input"
+                                            value={formData.unit}
+                                            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                                        >
+                                            <option value="Pcs">Pcs</option>
+                                            <option value="Strip">Strip</option>
+                                            <option value="Bottle">Bottle</option>
+                                            <option value="Box">Box</option>
+                                            <option value="Sachet">Sachet</option>
+                                        </select>
+                                    </div>
+
+                                    {/* New Tablets Per Strip Field */}
+                                    {(formData.unit === 'Strip' || formData.unit === 'Box') && (
+                                        <div className="form-group">
+                                            <label className="form-label">Tablets per Unit</label>
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                value={formData.tabletsPerStrip}
+                                                onChange={(e) => setFormData({ ...formData, tabletsPerStrip: e.target.value })}
+                                                placeholder="Default: 10"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="modal-actions">

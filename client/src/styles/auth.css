@@ -56,6 +56,9 @@
     height: 56px;
     width: auto;
     object-fit: contain;
+    background: white;
+    padding: 4px;
+    border-radius: 8px;
 }
 
 .auth-header h1 {

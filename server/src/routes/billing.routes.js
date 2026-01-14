@@ -68,11 +68,15 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'PHARMACIS
                     throw new Error(`Product not found: ${item.productId}`);
                 }
 
-                if (product.quantity < item.quantity) {
-                    throw new Error(`Insufficient stock for ${product.name}. Available: ${product.quantity}`);
+                // Convert Prisma Decimals to Numbers for comparison and math
+                const currentStock = Number(product.quantity);
+                const requestedQty = Number(item.quantity);
+
+                if (currentStock < requestedQty) {
+                    throw new Error(`Insufficient stock for ${product.name}. Available: ${currentStock}`);
                 }
 
-                const itemSubtotal = parseFloat(product.mrp) * item.quantity;
+                const itemSubtotal = parseFloat(product.mrp) * requestedQty;
                 // Item discount is also treated as percentage
                 const itemDiscountPercent = parseFloat(item.discount || 0);
                 const itemDiscountAmount = (itemSubtotal * itemDiscountPercent) / 100;
@@ -88,7 +92,7 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'PHARMACIS
                 invoiceItems.push({
                     productId: product.id,
                     productName: product.name,
-                    quantity: item.quantity,
+                    quantity: requestedQty,
                     unitPrice: product.mrp,
                     discount: itemDiscountAmount, // Store the calculated amount
                     gstRate: product.gstRate,
@@ -99,7 +103,7 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'PHARMACIS
                 });
 
                 // Update stock and auto-archive if zero
-                const newQuantity = product.quantity - item.quantity;
+                const newQuantity = currentStock - requestedQty;
                 const shouldArchive = newQuantity <= 0;
 
                 await tx.product.update({

@@ -112,6 +112,8 @@ export default function Billing() {
                 mrp: parseFloat(product.mrp),
                 gstRate: parseFloat(product.gstRate),
                 quantity: 1,
+                loose: 0,
+                tabletsPerStrip: product.tabletsPerStrip || 10,
                 maxQuantity: product.quantity,
                 discount: 0
             }]);
@@ -128,11 +130,18 @@ export default function Billing() {
         ));
     };
 
-    // Update item discount
-    const updateItemDiscount = (productId, discountAmt) => {
-        setCart(cart.map(item =>
-            item.productId === productId ? { ...item, discount: parseFloat(discountAmt) || 0 } : item
-        ));
+    // Update loose tablets count
+    const updateItemLoose = (productId, count) => {
+        const newLoose = parseInt(count) || 0;
+        if (newLoose < 0) return;
+
+        setCart(cart.map(item => {
+            if (item.productId !== productId) return item;
+
+            // Cap loose tablets to tabletsPerStrip - 1 (since 10 tabs = 1 strip)
+            const limit = (item.tabletsPerStrip || 10) - 1;
+            return { ...item, loose: Math.min(newLoose, limit) };
+        }));
     };
 
     // Remove from cart
@@ -146,11 +155,20 @@ export default function Billing() {
         let totalGst = 0;
 
         cart.forEach(item => {
-            const itemTotal = item.mrp * item.quantity;
-            // Item discount is percentage
-            const itemDiscountAmount = (itemTotal * item.discount) / 100;
-            const taxableAmount = itemTotal - itemDiscountAmount;
+            const stripPrice = item.mrp;
+            const tabletPrice = item.mrp / (item.tabletsPerStrip || 10);
+
+            const itemTotal = (stripPrice * item.quantity) + (tabletPrice * (item.loose || 0));
+
+            // Taxable Amount (assuming MRP includes GST? Usually MRP is inclusive, but here code treated it as base. 
+            // Looking at original code: itemTotal - discount... implies basic calc. 
+            // Let's stick to original flow: GST is added ON TOP of taxable amount derived from MRP?
+            // Wait, previous code: subtotal += itemTotal; totalGst += (taxable * gstRate).
+            // Let's assume MRP is base price here for simplicity or previous logic.
+
+            const taxableAmount = itemTotal; // No item level discount anymore
             const gstAmount = (taxableAmount * item.gstRate) / 100;
+
             subtotal += itemTotal;
             totalGst += gstAmount;
         });
@@ -172,8 +190,9 @@ export default function Billing() {
         try {
             const items = cart.map(item => ({
                 productId: item.productId,
-                quantity: item.quantity,
-                discount: item.discount
+                // Combine strip + loose into a single decimal quantity
+                quantity: item.quantity + ((item.loose || 0) / (item.tabletsPerStrip || 10)),
+                discount: 0 // No item level discount
             }));
 
             const res = await billingAPI.createInvoice(currentBranch?.id, {
@@ -312,31 +331,42 @@ export default function Billing() {
                                                 <span className="item-name">{item.name}</span>
                                                 <span className="item-price">{formatCurrency(item.mrp)} × {item.quantity}</span>
                                             </div>
-                                            <div className="item-controls" style={{ gap: '0.5rem' }}>
+                                            <div className="item-controls" style={{ gap: '0.5rem', alignItems: 'center' }}>
                                                 {/* Strip Quantity */}
                                                 <div className="quantity-controls">
                                                     <button onClick={() => updateQuantity(item.productId, item.quantity - 1)}>
                                                         <Minus size={14} />
                                                     </button>
-                                                    <span>{item.quantity}</span>
+                                                    <span title="Strips">{item.quantity}</span>
                                                     <button onClick={() => updateQuantity(item.productId, item.quantity + 1)}>
                                                         <Plus size={14} />
                                                     </button>
                                                 </div>
 
-                                                <input
-                                                    type="number"
-                                                    className="discount-input"
-                                                    placeholder="Disc %"
-                                                    value={item.discount || ''}
-                                                    onChange={(e) => updateItemDiscount(item.productId, e.target.value)}
-                                                />
+                                                {/* Loose Tablets Input */}
+                                                <div className="loose-controls" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <input
+                                                        type="number"
+                                                        className="form-input"
+                                                        style={{ width: '50px', padding: '4px', textAlign: 'center' }}
+                                                        placeholder="Tab"
+                                                        min="0"
+                                                        max={item.tabletsPerStrip ? item.tabletsPerStrip - 1 : 9}
+                                                        value={item.loose || ''}
+                                                        onChange={(e) => updateItemLoose(item.productId, e.target.value)}
+                                                    />
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tabs</span>
+                                                </div>
+
                                                 <button className="remove-btn" onClick={() => removeFromCart(item.productId)}>
                                                     <X size={16} />
                                                 </button>
                                             </div>
                                             <div className="item-total">
-                                                {formatCurrency((item.mrp * item.quantity) * (1 - (item.discount || 0) / 100))}
+                                                {formatCurrency(
+                                                    (item.mrp * item.quantity) +
+                                                    ((item.mrp / (item.tabletsPerStrip || 10)) * (item.loose || 0))
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -510,7 +540,11 @@ export default function Billing() {
                                         {invoice.items?.map(item => (
                                             <tr key={item.id}>
                                                 <td>{item.productName}</td>
-                                                <td style={{ textAlign: 'center' }}>{item.quantity}</td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    {Number(item.quantity) % 1 !== 0
+                                                        ? Number(item.quantity).toFixed(2).replace(/\.?0+$/, '')
+                                                        : item.quantity}
+                                                </td>
                                                 <td style={{ textAlign: 'right' }}>₹{parseFloat(item.unitPrice).toFixed(2)}</td>
                                                 <td style={{ textAlign: 'right' }}>₹{parseFloat(item.total).toFixed(2)}</td>
                                             </tr>

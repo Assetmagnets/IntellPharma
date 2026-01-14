@@ -140,9 +140,10 @@ model Product {
   purchasePrice   Decimal   @db.Decimal(10, 2)
   gstRate         Decimal   @db.Decimal(5, 2) @default(12)
   hsnCode         String?
-  quantity        Int       @default(0)
+  quantity        Decimal   @db.Decimal(10, 2) @default(0)
   minStock        Int       @default(10)
   unit            String    @default("Pcs")
+  tabletsPerStrip Int       @default(10)
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -193,7 +194,7 @@ model InvoiceItem {
   invoiceId       String
   productId       String
   productName     String
-  quantity        Int
+  quantity        Decimal   @db.Decimal(10, 2)
   unitPrice       Decimal   @db.Decimal(10, 2)
   discount        Decimal   @db.Decimal(10, 2) @default(0)
   gstRate         Decimal   @db.Decimal(5, 2)
@@ -234,7 +235,7 @@ model StockTransferItem {
   id              String        @id @default(uuid())
   transferId      String
   productId       String
-  quantity        Int
+  quantity        Decimal       @db.Decimal(10, 2)
 
   transfer        StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
   product         Product       @relation(fields: [productId], references: [id])
