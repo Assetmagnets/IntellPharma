@@ -42,8 +42,8 @@ export default function Login() {
             <div className="auth-container animate-slideUp">
                 <div className="auth-header">
                     <div className="auth-logo">
-                        <img src="/logo.png" alt="IntellPharma" className="auth-logo-img" />
-                        <span className="logo-text">IntellPharma</span>
+                        <img src="/logo.png" alt="Medistock" className="auth-logo-img" />
+                        <span className="logo-text">Medistock</span>
                     </div>
                     <h1>Welcome Back</h1>
                     <p>Sign in to manage your pharmacy</p>

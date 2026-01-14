@@ -499,7 +499,7 @@ export default function Billing() {
                             <div className="invoice-print-area" id="invoice-print">
                                 {/* Invoice Header with Pharmacy Name */}
                                 <div className="invoice-header-print">
-                                    <h1 className="pharmacy-name">{invoice.branch?.name || 'IntellPharma'}</h1>
+                                    <h1 className="pharmacy-name">{invoice.branch?.name || 'Medistock'}</h1>
                                     <p className="pharmacy-address">{invoice.branch?.address || ''}</p>
                                     {invoice.branch?.phone && <p>Phone: {invoice.branch.phone}</p>}
                                     {invoice.branch?.gstNumber && <p>GSTIN: {invoice.branch.gstNumber}</p>}

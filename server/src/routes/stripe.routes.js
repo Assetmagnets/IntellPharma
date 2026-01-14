@@ -198,6 +198,12 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
             const localSub = branch.subscription;
             const planConfig = PLANS[planId] || PLANS.BASIC;
 
+            // Safely parse the period end date
+            const periodEndTimestamp = subscription.current_period_end;
+            const periodEndDate = periodEndTimestamp
+                ? new Date(periodEndTimestamp * 1000)
+                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from now
+
             // Check if local DB is out of sync with Stripe
             const needsSync = !localSub ||
                 localSub.plan !== planId ||
@@ -205,12 +211,6 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
 
             if (needsSync) {
                 console.log(`🔄 Syncing subscription for user ${user.id}: ${localSub?.plan || 'NONE'} -> ${planId}`);
-
-                // Safely parse the period end date
-                const periodEndTimestamp = subscription.current_period_end;
-                const periodEndDate = periodEndTimestamp
-                    ? new Date(periodEndTimestamp * 1000)
-                    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from now
 
                 await prisma.subscription.upsert({
                     where: { branchId: branch.id },
@@ -247,7 +247,7 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
             hasSubscription: true,
             plan: planId,
             status: subscription.status,
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            currentPeriodEnd: periodEndDate, // Use the safely parsed date
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             stripeSubscriptionId: subscription.id
         });

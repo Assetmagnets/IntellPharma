@@ -8,7 +8,7 @@ export default function ProtectedRoute({ children, roles }) {
         return (
             <div className="loading-container">
                 <div className="loading-content">
-                    <img src="/medistock-logo-full.png" alt="IntellPharma" className="loading-logo" />
+                    <img src="/medistock-logo-full.png" alt="Medistock" className="loading-logo" />
                     <div className="spinner spinner-lg text-primary"></div>
                 </div>
             </div>
