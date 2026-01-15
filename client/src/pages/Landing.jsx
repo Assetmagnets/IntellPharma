@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+
 import { useAuth } from '../context/AuthContext';
 import {
     Pill,
@@ -10,12 +11,15 @@ import {
     Store,
     BarChart3,
     Users,
-    IndianRupee
+    IndianRupee,
+    ReceiptIndianRupeeIcon,
+    ReceiptText
 } from 'lucide-react';
 import '../styles/landing.css';
 
 export default function Landing() {
     const { isAuthenticated } = useAuth();
+
 
     return (
         <div className="landing-page">
@@ -49,6 +53,7 @@ export default function Landing() {
                 </div>
             </nav>
 
+            {/* Hero Section */}
             {/* Hero Section */}
             <section className="hero-section">
                 <div className="hero-content">
@@ -111,7 +116,7 @@ export default function Landing() {
                                 </div>
                             </div>
                             <div className="preview-card">
-                                <span className="preview-icon"><Receipt size={24} /></span>
+                                <span className="preview-icon"><ReceiptIndianRupeeIcon size={24} /></span>
                                 <div>
                                     <h4>89</h4>
                                     <p>Invoices</p>
@@ -130,13 +135,14 @@ export default function Landing() {
             </section>
 
             {/* Features Section */}
+            {/* Features Section */}
             <section className="features-section">
                 <h2 className="section-title">Everything You Need</h2>
                 <p className="section-subtitle">Powerful tools designed specifically for modern pharmacies</p>
                 <div className="features-grid">
                     <div className="feature-card">
                         <div className="feature-icon">
-                            <Receipt size={32} />
+                            <ReceiptText size={32} />
                         </div>
                         <h3>Smart Billing</h3>
                         <p>Barcode scanning, GST calculation, and instant invoice generation</p>
@@ -180,6 +186,7 @@ export default function Landing() {
             </section>
 
             {/* CTA Section */}
+            {/* CTA Section */}
             <section className="cta-section">
                 <div className="cta-content">
                     <h2>Ready to Get Started?</h2>
@@ -191,6 +198,7 @@ export default function Landing() {
             </section>
 
             {/* Footer */}
+            {/* Footer */}
             <footer className="landing-footer">
                 <div className="footer-content">
                     <div className="footer-brand">
@@ -200,6 +208,7 @@ export default function Landing() {
                     <p>© {new Date().getFullYear()} Medistock. All rights reserved.</p>
                 </div>
             </footer>
+
         </div>
     );
 }
