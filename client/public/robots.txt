@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://intellpharma.vercel.app/sitemap.xml
