@@ -37,18 +37,20 @@
       left: 0;
       width: 100%;
       height: 100%;
-      border: 4px solid #f3f3f3;
+      border: 4px solid transparent;
       border-top: 4px solid #2563eb;
-      /* Blue-600 to match likely theme */
+      border-right: 4px solid #2563eb;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
 
     .loading-logo {
-      width: 60px;
-      height: 60px;
+      width: 80%;
+      /* Adjusted to fill the spinner relative to width */
+      height: auto;
       object-fit: contain;
-      /* Optional: Add a subtle pulse or static */
+      max-height: 60%;
+      /* Ensure it doesn't touch edges vertically */
     }
 
     @keyframes spin {

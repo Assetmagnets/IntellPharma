@@ -67,7 +67,7 @@ export default function Sidebar() {
                 {/* Logo */}
                 <div className="sidebar-logo">
                     <img src="/logo.png" alt="Medistock" className="sidebar-logo-img" />
-                    <span className="logo-text">Medistock</span>
+                    <span className="logo-text">IntellPharma</span>
                 </div>
 
                 {/* Branch Switcher */}
