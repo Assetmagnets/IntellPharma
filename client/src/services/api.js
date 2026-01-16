@@ -37,6 +37,7 @@ api.interceptors.response.use(
 export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
     register: (userData) => api.post('/auth/register', userData),
+    logout: () => api.post('/auth/logout'),
     getProfile: () => api.get('/auth/me'),
     updateProfile: (data) => api.put('/auth/update-profile', data),
     verifyPassword: (password) => api.post('/auth/verify-password', { password }),
@@ -117,5 +118,28 @@ export const stripeAPI = {
     verifySession: (sessionId) => api.get(`/stripe/verify-session/${sessionId}`)
 };
 
-export default api;
 
+
+// Super Admin APIs
+export const superAdminAPI = {
+    createSuperAdmin: (data) => api.post('/super-admin/create', data),
+    getStats: () => api.get('/super-admin/stats'),
+    getPharmacies: () => api.get('/super-admin/pharmacies'),
+    updatePharmacyStatus: (branchId, isActive) => api.patch(`/super-admin/pharmacies/${branchId}/status`, { isActive }),
+    getActivityLogs: () => api.get('/super-admin/activity-logs'),
+    // Blog management
+    createBlogPost: (data) => api.post('/super-admin/blog', data),
+    getAllBlogPosts: () => api.get('/super-admin/blog'),
+    updateBlogPost: (id, data) => api.put(`/super-admin/blog/${id}`, data),
+    deleteBlogPost: (id) => api.delete(`/super-admin/blog/${id}`)
+};
+
+// Blog APIs (for regular users)
+export const blogAPI = {
+    getPosts: () => api.get('/blog'),
+    getPost: (id) => api.get(`/blog/${id}`),
+    getUnreadCount: () => api.get('/blog/unread-count'),
+    markAsRead: () => api.post('/blog/mark-read')
+};
+
+export default api;

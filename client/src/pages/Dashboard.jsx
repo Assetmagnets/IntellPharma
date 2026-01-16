@@ -168,7 +168,7 @@ export default function Dashboard() {
                             <h2>Quick Actions</h2>
                             <div className="quick-actions">
                                 <button className="action-card glass-card" onClick={() => window.location.href = '/billing'}>
-                                    <ReceiptIndianRupeeIcon className="action-icon" size={32} color='green'/>
+                                    <ReceiptIndianRupeeIcon className="action-icon" size={32} color='green' />
                                     <span className="action-label">New Invoice</span>
                                 </button>
                                 <button className="action-card glass-card" onClick={() => window.location.href = '/inventory'}>
@@ -176,7 +176,7 @@ export default function Dashboard() {
                                     <span className="action-label">Add Product</span>
                                 </button>
                                 <button className="action-card glass-card" onClick={() => window.location.href = '/inventory?filter=low-stock'}>
-                                    <AlertTriangle className="action-icon" size={32} color='red'/>
+                                    <AlertTriangle className="action-icon" size={32} color='red' />
                                     <span className="action-label">Low Stock</span>
                                 </button>
                                 <button className="action-card glass-card" onClick={() => window.location.href = '/reports'}>

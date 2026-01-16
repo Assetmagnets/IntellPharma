@@ -596,9 +596,18 @@
     font-size: clamp(2rem, 4vw, 3rem);
     font-weight: 800;
     text-align: center;
-    color: #ffffff;
     margin-bottom: 1rem;
     letter-spacing: -0.02em;
+
+    /* --- THE FIX --- */
+    color: #ffffff !important;
+    /* Force white color */
+    -webkit-text-fill-color: #ffffff;
+    /* Overrides any "transparent" text fill settings */
+    background: none;
+    /* Removes any background gradients interfering with text */
+    opacity: 1;
+    /* Ensures the text isn't see-through */
 }
 
 .section-subtitle {

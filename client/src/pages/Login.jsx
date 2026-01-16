@@ -28,8 +28,12 @@ export default function Login() {
         setLoading(true);
 
         try {
-            await login(email, password);
-            navigate('/dashboard');
+            const response = await login(email, password);
+            if (response.user.role === 'SUPERADMIN') {
+                navigate('/super-admin/dashboard');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err) {
             setError(err.message || 'Invalid email or password');
         } finally {
@@ -43,7 +47,7 @@ export default function Login() {
                 <div className="auth-header">
                     <div className="auth-logo">
                         <img src="/logo.png" alt="Medistock" className="auth-logo-img" />
-                        <span className="logo-text">Medistock</span>
+                        <span className="logo-text">IntellPharma</span>
                     </div>
                     <h1>Welcome Back</h1>
                     <p>Sign in to manage your pharmacy</p>

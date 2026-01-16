@@ -18,6 +18,10 @@ import Users from './pages/Users';
 import Settings from './pages/Settings';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
+import Blog from './pages/Blog';
+import BlogDetail from './pages/BlogDetail';
+import { SuperAdminLayout, SuperAdminDashboard, Pharmacies, ActivityLogs, BlogManagement } from './pages/superadmin';
+
 
 // Styles
 import './index.css';
@@ -109,6 +113,24 @@ function App() {
               }
             />
 
+            {/* Blog Routes for Regular Users */}
+            <Route
+              path="/blog"
+              element={
+                <ProtectedRoute>
+                  <Blog />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/blog/:id"
+              element={
+                <ProtectedRoute>
+                  <BlogDetail />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Payment Result Routes */}
             <Route
               path="/payment-success"
@@ -127,6 +149,25 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+
+
+
+            {/* Super Admin Routes */}
+            <Route
+              path="/super-admin"
+              element={
+                <ProtectedRoute roles={['SUPERADMIN']}>
+                  <SuperAdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="dashboard" element={<SuperAdminDashboard />} />
+              <Route path="pharmacies" element={<Pharmacies />} />
+              <Route path="activity" element={<ActivityLogs />} />
+              <Route path="blog" element={<BlogManagement />} />
+              <Route index element={<Navigate to="dashboard" replace />} />
+            </Route>
 
             {/* Catch all - redirect to landing */}
             <Route path="*" element={<Navigate to="/" replace />} />

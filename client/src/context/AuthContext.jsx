@@ -91,7 +91,23 @@ export function AuthProvider({ children }) {
         return data;
     };
 
-    const logout = () => {
+    const logout = async () => {
+        // Call backend to log the logout action before clearing token
+        try {
+            if (token) {
+                await fetch(`${API_URL}/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Logout API error:', error);
+            // Continue with local logout even if API fails
+        }
+
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);

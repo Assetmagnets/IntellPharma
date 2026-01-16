@@ -45,8 +45,8 @@ const authorize = (...allowedRoles) => {
             return res.status(401).json({ error: 'Authentication required.' });
         }
 
-        // Owner has access to everything
-        if (req.user.role === 'OWNER') {
+        // Owner and Superadmin have access to everything
+        if (req.user.role === 'OWNER' || req.user.role === 'SUPERADMIN') {
             return next();
         }
 
@@ -67,8 +67,8 @@ const requireBranchAccess = async (req, res, next) => {
             return res.status(400).json({ error: 'Branch ID is required.' });
         }
 
-        // Owner has access to all branches
-        if (req.user.role === 'OWNER') {
+        // Owner and Superadmin have access to all branches
+        if (req.user.role === 'OWNER' || req.user.role === 'SUPERADMIN') {
             return next();
         }
 

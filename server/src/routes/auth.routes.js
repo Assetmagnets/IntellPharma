@@ -155,6 +155,36 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Logout (logs the action to audit log)
+router.post('/logout', authenticate, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            include: {
+                branchAccess: {
+                    include: { branch: true }
+                },
+                ownedBranches: true
+            }
+        });
+
+        if (user) {
+            const branches = user.role === 'OWNER'
+                ? user.ownedBranches
+                : user.branchAccess.map(ba => ba.branch);
+
+            const branchId = branches.length > 0 ? branches[0].id : null;
+
+            await logAudit(user.id, branchId, 'LOGOUT', 'User', user.id, 'User logout', req.ip);
+        }
+
+        res.json({ message: 'Logout successful!' });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ error: 'Logout failed.' });
+    }
+});
+
 // Get current user profile
 router.get('/me', authenticate, async (req, res) => {
     try {

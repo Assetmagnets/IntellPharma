@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { blogAPI } from '../services/api';
 import {
     Home,
     ReceiptText,
@@ -15,7 +16,8 @@ import {
     Menu,
     X,
     Sun,
-    Moon
+    Moon,
+    FileText
 } from 'lucide-react';
 
 import AIAssistant from './AIAssistant';
@@ -26,6 +28,24 @@ export default function Sidebar() {
     const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
+    const [unreadBlogCount, setUnreadBlogCount] = useState(0);
+
+    // Fetch unread blog count
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const response = await blogAPI.getUnreadCount();
+                setUnreadBlogCount(response.data.unreadCount);
+            } catch (error) {
+                console.error('Failed to fetch unread blog count:', error);
+            }
+        };
+
+        fetchUnreadCount();
+        // Refresh every 60 seconds
+        const interval = setInterval(fetchUnreadCount, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -40,6 +60,7 @@ export default function Sidebar() {
         { path: '/branches', icon: Store, label: 'Branches', roles: ['OWNER'] },
         { path: '/users', icon: Users, label: 'Users', roles: ['OWNER', 'MANAGER'] },
         { path: '/subscription', icon: Crown, label: 'Subscription', roles: ['OWNER'] },
+        { path: '/blog', icon: FileText, label: 'Blog', roles: ['OWNER', 'MANAGER', 'PHARMACIST', 'BILLING_STAFF', 'INVENTORY_STAFF'], badge: unreadBlogCount },
         { path: '/settings', icon: Settings, label: 'Settings', roles: ['OWNER', 'MANAGER'] },
     ];
 
@@ -104,9 +125,32 @@ export default function Sidebar() {
                                     `nav-item ${isActive ? 'active' : ''}`
                                 }
                                 onClick={closeSidebar}
+                                style={{ position: 'relative' }}
                             >
                                 <Icon className="nav-icon" size={20} />
                                 <span className="nav-label">{item.label}</span>
+                                {item.badge > 0 && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        right: '12px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: '#ef4444',
+                                        color: 'white',
+                                        fontSize: '0.6875rem',
+                                        fontWeight: '700',
+                                        minWidth: '20px',
+                                        height: '20px',
+                                        borderRadius: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '0 6px',
+                                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)'
+                                    }}>
+                                        {item.badge > 99 ? '99+' : item.badge}
+                                    </span>
+                                )}
                             </NavLink>
                         );
                     })}

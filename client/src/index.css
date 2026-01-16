@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* =====================================================
    PHARMASTOCK - DESIGN SYSTEM
    Premium Pharmacy Management System

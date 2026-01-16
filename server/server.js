@@ -18,9 +18,23 @@ const { runScheduler } = require('./src/services/scheduler');
 // Start Scheduler
 runScheduler();
 
-// Middleware
+// Middleware - CORS configuration
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    process.env.CORS_ORIGIN
+].filter(Boolean);
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -45,6 +59,9 @@ app.use('/api/v1/billing', billingRoutes);
 app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/subscription', subscriptionRoutes);
 app.use('/api/v1/stripe', stripeRoutes);
+app.use('/api/v1/super-admin', require('./src/routes/superAdmin.routes'));
+app.use('/api/v1/blog', require('./src/routes/blog.routes'));
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
