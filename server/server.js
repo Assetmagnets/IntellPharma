@@ -23,16 +23,27 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175',
-    process.env.CORS_ORIGIN
+    'http://localhost:3000',
+    // Add production origins from environment variable (comma-separated)
+    ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [])
 ].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl)
+        // Allow requests with no origin (like mobile apps, curl, or same-origin)
         if (!origin) return callback(null, true);
+
+        // Check if origin is in allowed list
         if (allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
+
+        // In production, also allow any Vercel/Netlify preview deployments
+        if (origin.includes('.vercel.app') || origin.includes('.netlify.app')) {
+            return callback(null, true);
+        }
+
+        console.warn(`CORS blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ')}`);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true
