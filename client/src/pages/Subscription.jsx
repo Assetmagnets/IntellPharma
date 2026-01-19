@@ -326,7 +326,7 @@ export default function Subscription() {
 
                                     {isCurrentPlan(plan.id) ? (
                                         <button className="btn btn-success w-full" disabled>
-                                            ✓ Current Plan
+                                            <CheckCircle size={16} /> Current Plan
                                         </button>
                                     ) : plan.id === 'ENTERPRISE' ? (
                                         <button className="btn btn-secondary w-full" onClick={() => alert('Contact sales@medistock.com for Enterprise pricing')}>
