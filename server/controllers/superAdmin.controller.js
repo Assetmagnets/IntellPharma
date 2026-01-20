@@ -284,9 +284,6 @@ exports.deleteBlogPost = async (req, res) => {
 exports.getPublishedBlogPosts = async (req, res) => {
     try {
         const posts = await prisma.blogPost.findMany({
-            where: {
-                isPublished: true
-            },
             include: {
                 author: {
                     select: {

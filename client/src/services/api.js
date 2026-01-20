@@ -33,6 +33,14 @@ api.interceptors.response.use(
     }
 );
 
+// Public API instance (No auth headers, no 401 redirects)
+const publicApi = axios.create({
+    baseURL: API_URL,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
+
 // Auth APIs
 export const authAPI = {
     login: (credentials) => api.post('/auth/login', credentials),
@@ -136,8 +144,8 @@ export const superAdminAPI = {
 
 // Blog APIs (for regular users)
 export const blogAPI = {
-    getPosts: () => api.get('/blog'),
-    getPost: (id) => api.get(`/blog/${id}`),
+    getPosts: () => publicApi.get('/blog'),
+    getPost: (id) => publicApi.get(`/blog/${id}`),
     getUnreadCount: () => api.get('/blog/unread-count'),
     markAsRead: () => api.post('/blog/mark-read')
 };

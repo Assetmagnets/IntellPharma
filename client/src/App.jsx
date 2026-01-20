@@ -22,7 +22,9 @@ import Blog from './pages/Blog';
 import BlogDetail from './pages/BlogDetail';
 import { SuperAdminLayout, SuperAdminDashboard, Pharmacies, ActivityLogs, BlogManagement } from './pages/superadmin';
 
-
+import PublicLayout from './layouts/PublicLayout';
+import About from './pages/About';
+import Pricing from './pages/Pricing';
 // Styles
 import './index.css';
 import './styles/glass.css';
@@ -39,6 +41,14 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            {/* Public Pages Layout */}
+            <Route element={<PublicLayout />}>
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:id" element={<BlogDetail />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/pricing" element={<Pricing />} />
+            </Route>
 
             {/* Protected Routes */}
             <Route
@@ -113,23 +123,7 @@ function App() {
               }
             />
 
-            {/* Blog Routes for Regular Users */}
-            <Route
-              path="/blog"
-              element={
-                <ProtectedRoute>
-                  <Blog />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/blog/:id"
-              element={
-                <ProtectedRoute>
-                  <BlogDetail />
-                </ProtectedRoute>
-              }
-            />
+
 
             {/* Payment Result Routes */}
             <Route

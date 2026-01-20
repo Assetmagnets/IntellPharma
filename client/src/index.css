@@ -210,6 +210,21 @@ a:hover {
   color: var(--primary-600);
 }
 
+/* Preserve button text color on hover */
+a.btn,
+a.btn:hover,
+a.btn:focus,
+a.btn:active {
+  color: inherit;
+}
+
+a.btn-primary,
+a.btn-primary:hover,
+a.btn-success,
+a.btn-success:hover {
+  color: white !important;
+}
+
 /* Utility Classes */
 .text-center {
   text-align: center;

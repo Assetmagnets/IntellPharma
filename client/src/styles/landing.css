@@ -199,12 +199,11 @@
 .hero-section {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 5rem;
-    align-items: center;
-    padding: 4rem 6% 8rem;
+    gap: 4rem;
+    align-items: start;
+    padding: 3rem 6% 4rem;
     max-width: 1440px;
     margin: 0 auto;
-    min-height: calc(100vh - 100px);
 }
 
 @media (max-width: 1024px) {
@@ -848,9 +847,102 @@
     }
 }
 
-/* Hide header buttons on small screens */
+/* Mobile Navigation Styles */
+.mobile-menu-btn {
+    display: none;
+    /* Hidden on Desktop */
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    z-index: 1000;
+}
+
 @media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+        /* Show on Mobile */
+        position: absolute;
+        right: 20px !important;
+        top: 25px !important;
+        left: auto !important;
+        transform: none !important;
+    }
+
     .landing-nav .nav-links {
         display: none;
+        /* Hidden by default */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.98);
+        backdrop-filter: blur(10px);
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 2rem !important;
+        z-index: 900;
+        padding: 2rem;
+    }
+
+    .landing-nav .nav-links.open {
+        display: flex !important;
+    }
+
+    .landing-nav .nav-links .nav-link {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    /* Hide desktop actions entirely on mobile */
+    .landing-nav .nav-actions {
+        display: none !important;
+    }
+}
+
+/* Logo Carousel */
+.logo-slider {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    padding: 2rem 0;
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.logo-slide-track {
+    display: flex;
+    gap: 4rem;
+    width: max-content;
+    animation: scroll 30s linear infinite;
+}
+
+.logo-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #94a3b8;
+    filter: grayscale(100%);
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.logo-item:hover {
+    filter: grayscale(0%);
+    opacity: 1;
+    color: #f8fafc;
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
     }
 }

@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom';
-
-import { useAuth } from '../context/AuthContext';
+import PublicNavbar from '../components/PublicNavbar';
+import PublicFooter from '../components/PublicFooter';
 import {
-    Pill,
     Sparkles,
     Rocket,
     ArrowRight,
-    Receipt,
     Package,
     Store,
     BarChart3,
@@ -18,62 +16,34 @@ import {
 import '../styles/landing.css';
 
 export default function Landing() {
-    const { isAuthenticated } = useAuth();
-
-
     return (
         <div className="landing-page">
-            {/* Background */}
             <div className="landing-bg">
                 <div className="bg-gradient"></div>
                 <div className="bg-pattern"></div>
             </div>
 
-            {/* Navbar */}
-            <nav className="landing-nav">
-                <div className="nav-brand">
-                    <img src="/logo.png" alt="Medistock" className="brand-logo" />
-                    <span className="brand-text">IntellPharma</span>
-                </div>
-                <div className="nav-links">
-                    {isAuthenticated ? (
-                        <Link to="/dashboard" className="btn btn-primary">
-                            Go to Dashboard
-                        </Link>
-                    ) : (
-                        <>
-                            <Link to="/login" className="btn btn-ghost">
-                                Login
-                            </Link>
-                            <Link to="/register" className="btn btn-primary">
-                                Get Started
-                            </Link>
-                        </>
-                    )}
-                </div>
-            </nav>
+            <PublicNavbar />
 
-            {/* Hero Section */}
             {/* Hero Section */}
             <section className="hero-section">
                 <div className="hero-content">
                     <div className="hero-badge">
-                        <Sparkles size={16} /> AI-Powered Pharmacy Management
+                        <Sparkles size={16} /> #1 Pharmacy Software In India
                     </div>
                     <h1 className="hero-title">
-                        Transform Your
-                        <span className="gradient-text"> Pharmacy Business</span>
+                        Smart Inventory &
+                        <span className="gradient-text"> Billing Software</span>
                     </h1>
                     <p className="hero-description">
-                        PharmaStock is the complete multi-branch pharmacy governance and sales system.
-                        Manage inventory, billing, GST compliance, and get AI-driven insights - all in one platform.
+                        IntellPharma helps you manage your pharmacy inventory, generate GST bills, and track expiry dates—all in one place. Designed for speed, security, and simplicity.
                     </p>
                     <div className="hero-actions">
-                        <Link to="/register" className="btn btn-primary btn-lg hover:text-white">
-                            <Rocket size={20} /> Get Started Free
+                        <Link to="/register" className="btn btn-primary btn-lg">
+                            Start Free Trial
                         </Link>
-                        <Link to="/login" className="btn btn-secondary btn-lg btn-ghost">
-                            Sign In <ArrowRight size={20} />
+                        <Link to="/pricing" className="btn btn-secondary btn-lg">
+                            See Pricing
                         </Link>
                     </div>
                     <div className="hero-stats">
@@ -135,10 +105,9 @@ export default function Landing() {
             </section>
 
             {/* Features Section */}
-            {/* Features Section */}
-            <section className="features-section">
+            <section id="features" className="features-section">
                 <h2 className="section-title">Everything You Need</h2>
-                <p className="section-subtitle">Powerful tools designed specifically for modern pharmacies,utilizing data-driven healthcare logistics.</p>
+                <p className="section-subtitle">Powerful tools designed specifically for modern pharmacies, utilizing data-driven healthcare logistics.</p>
                 <div className="features-grid">
                     <div className="feature-card">
                         <div className="feature-icon">
@@ -186,45 +155,17 @@ export default function Landing() {
             </section>
 
             {/* CTA Section */}
-            {/* CTA Section */}
             <section className="cta-section">
                 <div className="cta-content">
                     <h2>Ready to Get Started?</h2>
-                    <p>Join thousands of pharmacies already using PharmaStock</p>
+                    <p>Join thousands of pharmacies already using IntellPharma</p>
                     <Link to="/register" className="btn btn-primary btn-lg">
                         Start Your Free Trial
                     </Link>
                 </div>
             </section>
 
-            {/* Footer */}
-            {/* Footer */}
-            <footer className="landing-footer">
-                <div className="footer-content">
-                    <div className="footer-brand">
-                        <img src="/logo.png" alt="Medistock" className="footer-logo" />
-                        <span>IntellPharma</span>
-                    </div>
-                    <p style={{ color: "#BFC3D6" }}>
-                        © {new Date().getFullYear()} IntellPharma by{" "}
-                        <a
-                            href="https://www.assetmagnets.com/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                                color: "#FF4D00",   // Orange like your image
-                                textDecoration: "none",
-                                fontWeight: "600",
-                            }}
-                        >
-                            ASSETMAGNETS
-                        </a>
-                        . All rights reserved.
-                    </p>
-
-                </div>
-            </footer>
-
+            <PublicFooter />
         </div>
     );
 }

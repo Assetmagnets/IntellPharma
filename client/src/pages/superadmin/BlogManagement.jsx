@@ -166,7 +166,7 @@ export default function BlogManagement() {
             </Header>
 
             {/* Stats Summary */}
-            <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '2rem' }}>
+            <div className="stats-grid three-cols" style={{ marginBottom: '2rem' }}>
                 <div className="stat-card">
                     <div className="stat-icon gradient-primary">
                         <FileText size={24} />
@@ -209,25 +209,9 @@ export default function BlogManagement() {
                 ) : (
                     <div className="recent-prompts">
                         {posts.map((post) => (
-                            <div key={post.id} className="prompt-item glass-panel" style={{
-                                padding: '1.25rem',
-                                display: 'grid',
-                                gridTemplateColumns: 'auto 1fr auto auto',
-                                alignItems: 'center',
-                                gap: '1.5rem'
-                            }}>
+                            <div key={post.id} className="prompt-item glass-panel blog-post-item">
                                 {/* Image Thumbnail */}
-                                <div style={{
-                                    width: '80px',
-                                    height: '60px',
-                                    borderRadius: '10px',
-                                    overflow: 'hidden',
-                                    background: 'var(--dark-surface-2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0
-                                }}>
+                                <div className="blog-post-image">
                                     {post.image ? (
                                         <img
                                             src={post.image}
@@ -240,7 +224,7 @@ export default function BlogManagement() {
                                 </div>
 
                                 {/* Post Info */}
-                                <div style={{ minWidth: 0 }}>
+                                <div className="blog-post-content">
                                     <strong style={{
                                         display: 'block',
                                         color: 'var(--dark-text)',
@@ -316,7 +300,7 @@ export default function BlogManagement() {
                                 </div>
 
                                 {/* Actions */}
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <div className="blog-post-actions">
                                     <button
                                         onClick={() => handleEdit(post)}
                                         style={{
