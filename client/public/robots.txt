@@ -1,3 +1,26 @@
 User-agent: *
 Allow: /
-Sitemap: https://intellpharma.vercel.app/sitemap.xml
+
+# Private Routes (System & User Dashboard)
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /dashboard
+Disallow: /billing
+Disallow: /inventory
+Disallow: /reports
+Disallow: /branches
+Disallow: /users
+Disallow: /subscription
+Disallow: /settings
+Disallow: /payment-success
+Disallow: /payment-cancel
+
+# Super Admin
+Disallow: /super-admin
+
+# API & System
+Disallow: /api
+
+# Sitemap
+Sitemap: https://intellpharma.in/sitemap.xml

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import {
     CheckCircle2,
     ArrowRight,
@@ -82,6 +83,11 @@ const FAQItem = ({ question, answer }) => {
 export default function About() {
     return (
         <div className="about-page" style={{ overflowX: 'hidden' }}>
+            <SEO
+                title="About Us"
+                description="Learn how IntellPharma is revolutionizing pharmacy management with AI-driven inventory control, billing, and analytics."
+                canonicalUrl="/about"
+            />
 
             {/* 1. Hero Section */}
             <section style={{

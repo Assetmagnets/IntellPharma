@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import {
@@ -18,6 +19,7 @@ import '../styles/landing.css';
 export default function Landing() {
     return (
         <div className="landing-page">
+            <SEO />
             <div className="landing-bg">
                 <div className="bg-gradient"></div>
                 <div className="bg-pattern"></div>

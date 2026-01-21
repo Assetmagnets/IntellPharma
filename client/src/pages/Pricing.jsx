@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import {
     Check,
     Zap,
@@ -79,6 +80,11 @@ const FAQItem = ({ question, answer }) => {
 export default function Pricing() {
     return (
         <div className="pricing-page" style={{ overflowX: 'hidden' }}>
+            <SEO
+                title="Pricing Plans"
+                description="Flexible pricing plans for pharmacies of all sizes. Start for free with our Basic plan or upgrade for advanced AI features."
+                canonicalUrl="/pricing"
+            />
 
             {/* 1. Hero Section (Matching About.jsx style but CENTERED) */}
             <section style={{

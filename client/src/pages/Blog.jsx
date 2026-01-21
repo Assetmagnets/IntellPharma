@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import { Search, Calendar, ChevronRight } from 'lucide-react';
 import { blogAPI } from '../services/api';
 import '../styles/landing.css';
@@ -49,6 +50,11 @@ const Blog = () => {
 
     return (
         <div className="blog-page">
+            <SEO
+                title="Pharmacy Insights Blog"
+                description="Latest news, tips, and insights on pharmacy management, healthcare technology, and business growth."
+                canonicalUrl="/blog"
+            />
             <style>
                 {`
                     @keyframes spin { to { transform: rotate(360deg); } }

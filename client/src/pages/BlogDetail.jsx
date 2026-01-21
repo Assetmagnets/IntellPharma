@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import SEO from '../components/SEO';
 import { blogAPI } from '../services/api';
 import {
     FileText,
@@ -75,6 +76,12 @@ export default function BlogDetail() {
 
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem' }}>
+            <SEO
+                title={post.title}
+                description={post.excerpt}
+                image={post.image}
+                canonicalUrl={`/blog/${id}`}
+            />
             <button
                 className="btn btn-secondary"
                 onClick={() => navigate('/blog')}

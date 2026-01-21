@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -32,143 +33,145 @@ import './styles/components.css';
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+    <HelmetProvider>
+      <BrowserRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
-            {/* Public Pages Layout */}
-            <Route element={<PublicLayout />}>
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:id" element={<BlogDetail />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/pricing" element={<Pricing />} />
-            </Route>
+              {/* Public Pages Layout */}
+              <Route element={<PublicLayout />}>
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:id" element={<BlogDetail />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/pricing" element={<Pricing />} />
+              </Route>
 
-            {/* Protected Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/billing"
-              element={
-                <ProtectedRoute roles={['OWNER', 'MANAGER', 'PHARMACIST', 'BILLING_STAFF']}>
-                  <Billing />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/billing"
+                element={
+                  <ProtectedRoute roles={['OWNER', 'MANAGER', 'PHARMACIST', 'BILLING_STAFF']}>
+                    <Billing />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/inventory"
-              element={
-                <ProtectedRoute roles={['OWNER', 'MANAGER', 'PHARMACIST', 'INVENTORY_STAFF']}>
-                  <Inventory />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/inventory"
+                element={
+                  <ProtectedRoute roles={['OWNER', 'MANAGER', 'PHARMACIST', 'INVENTORY_STAFF']}>
+                    <Inventory />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute roles={['OWNER', 'MANAGER']}>
-                  <Reports />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute roles={['OWNER', 'MANAGER']}>
+                    <Reports />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/branches"
-              element={
-                <ProtectedRoute roles={['OWNER']}>
-                  <Branches />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/branches"
+                element={
+                  <ProtectedRoute roles={['OWNER']}>
+                    <Branches />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute roles={['OWNER', 'MANAGER']}>
-                  <Users />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute roles={['OWNER', 'MANAGER']}>
+                    <Users />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/subscription"
-              element={
-                <ProtectedRoute roles={['OWNER']}>
-                  <Subscription />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/subscription"
+                element={
+                  <ProtectedRoute roles={['OWNER']}>
+                    <Subscription />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute roles={['OWNER', 'MANAGER']}>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-
-
-
-            {/* Payment Result Routes */}
-            <Route
-              path="/payment-success"
-              element={
-                <ProtectedRoute roles={['OWNER']}>
-                  <PaymentSuccess />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/payment-cancel"
-              element={
-                <ProtectedRoute roles={['OWNER']}>
-                  <PaymentCancel />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute roles={['OWNER', 'MANAGER']}>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
 
 
 
+              {/* Payment Result Routes */}
+              <Route
+                path="/payment-success"
+                element={
+                  <ProtectedRoute roles={['OWNER']}>
+                    <PaymentSuccess />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Super Admin Routes */}
-            <Route
-              path="/super-admin"
-              element={
-                <ProtectedRoute roles={['SUPERADMIN']}>
-                  <SuperAdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="dashboard" element={<SuperAdminDashboard />} />
-              <Route path="pharmacies" element={<Pharmacies />} />
-              <Route path="activity" element={<ActivityLogs />} />
-              <Route path="blog" element={<BlogManagement />} />
-              <Route index element={<Navigate to="dashboard" replace />} />
-            </Route>
+              <Route
+                path="/payment-cancel"
+                element={
+                  <ProtectedRoute roles={['OWNER']}>
+                    <PaymentCancel />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Catch all - redirect to landing */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+
+
+
+              {/* Super Admin Routes */}
+              <Route
+                path="/super-admin"
+                element={
+                  <ProtectedRoute roles={['SUPERADMIN']}>
+                    <SuperAdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="dashboard" element={<SuperAdminDashboard />} />
+                <Route path="pharmacies" element={<Pharmacies />} />
+                <Route path="activity" element={<ActivityLogs />} />
+                <Route path="blog" element={<BlogManagement />} />
+                <Route index element={<Navigate to="dashboard" replace />} />
+              </Route>
+
+              {/* Catch all - redirect to landing */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }
 
