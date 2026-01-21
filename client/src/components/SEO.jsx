@@ -4,8 +4,8 @@ export default function SEO({ title, description, keywords, canonicalUrl, image 
   const siteName = "IntellPharma";
   const defaultDescription = "Transform your pharmacy with IntellPharma's AI-driven management system. Optimize inventory, streamline billing, and gain real-time insights.";
   const defaultKeywords = "pharmacy management, medical shop software, inventory management, billing software";
-  const defaultImage = "https://intellpharma.in/logo.png";
-  const baseUrl = "https://intellpharma.in";
+  const defaultImage = "https://www.intellpharma.in/logo.png";
+  const baseUrl = "https://www.intellpharma.in";
 
   const finalTitle = title ? `${title} | ${siteName}` : `${siteName} | AI-Powered Pharmacy Management`;
   const finalDescription = description || defaultDescription;
