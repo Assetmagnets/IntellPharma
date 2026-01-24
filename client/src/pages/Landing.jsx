@@ -42,11 +42,11 @@ export default function Landing() {
                         <Sparkles size={16} /> #1 Pharmacy Software In India
                     </div>
                     <h1 className="hero-title">
-                        Smart Inventory &
-                        <span className="gradient-text"> Billing Software</span>
+                        India's Best Cloud-Based
+                        <span className="gradient-text"> Pharmacy Software</span>
                     </h1>
                     <p className="hero-description">
-                        IntellPharma helps you manage your pharmacy inventory, generate GST bills, and track expiry dates—all in one place. Designed for speed, security, and simplicity.
+                        IntellPharma is the #1 <strong>online medical store management system</strong>. Automate inventory, GST billing, and expiry tracking with our AI-powered digital solution.
                     </p>
                     <div className="hero-actions">
                         <button onClick={openRegister} className="btn btn-primary btn-lg">
@@ -116,8 +116,8 @@ export default function Landing() {
 
             {/* Features Section */}
             <section id="features" className="features-section">
-                <h2 className="section-title">Everything You Need</h2>
-                <p className="section-subtitle">Powerful tools designed specifically for modern pharmacies, utilizing data-driven healthcare logistics.</p>
+                <h2 className="section-title">Digital Solutions for Modern Retail</h2>
+                <p className="section-subtitle">Upgrade your medical shop with our cloud-based tools. From smart billing to AI analytics, we have everything a modern pharmacy needs.</p>
                 <div className="features-grid">
                     <div className="feature-card">
                         <div className="feature-icon">

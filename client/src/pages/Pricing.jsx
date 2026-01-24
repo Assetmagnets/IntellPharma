@@ -109,7 +109,7 @@ export default function Pricing() {
                     fontWeight: '600',
                     marginBottom: '1.5rem'
                 }}>
-                    <Star size={14} fill="currentColor" /> Simple, Transparent Pricing
+                    <Star size={14} fill="currentColor" /> Affordable Pharmacy Software
                 </div>
                 <h1 style={{
                     fontSize: 'clamp(2.5rem, 5vw, 4rem)',
