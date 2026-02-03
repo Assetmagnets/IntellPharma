@@ -13,7 +13,11 @@ import {
     Users,
     IndianRupee,
     ReceiptIndianRupeeIcon,
-    ReceiptText
+    ReceiptText,
+    Check,
+    UserPlus,
+    PackagePlus,
+    Zap
 } from 'lucide-react';
 import '../styles/landing.css';
 
@@ -114,9 +118,23 @@ export default function Landing() {
                 </div>
             </section>
 
+            {/* Trust Signals Section */}
+            <section className="trust-section">
+                <div className="trust-badge">
+                    <Sparkles size={16} />
+                    Trusted by 50+ Pharmacies Across India
+                </div>
+                <div className="trust-logos">
+                    <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.9rem' }}>🔒 SSL Secured</span>
+                    <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.9rem' }}>📊 GST Compliant</span>
+                    <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.9rem' }}>☁️ Cloud Hosted</span>
+                    <span style={{ color: '#94a3b8', fontWeight: '600', fontSize: '0.9rem' }}>🛡️ Data Protected</span>
+                </div>
+            </section>
+
             {/* Features Section */}
             <section id="features" className="features-section">
-                <h2 className="section-title">Digital Solutions for Modern Retail</h2>
+                <h2 className="section-title" style={{ background: 'transparent', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}>Digital Solutions for Modern Retail</h2>
                 <p className="section-subtitle">Upgrade your medical shop with our cloud-based tools. From smart billing to AI analytics, we have everything a modern pharmacy needs.</p>
                 <div className="features-grid">
                     <div className="feature-card">
@@ -165,34 +183,58 @@ export default function Landing() {
             </section>
 
             {/* SEO Content Section - "Why Choose Us" */}
-            <section className="features-section" style={{ background: 'var(--surface-color)', paddingBottom: '4rem' }}>
-                <h2 className="section-title">Why Choose IntellPharma?</h2>
+            {/* SEO Content Section - "Why Choose Us" */}
+            <section className="features-section" style={{ background: 'transparent', paddingBottom: '4rem' }}>
+                <h2 className="section-title" style={{ background: 'transparent', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}>Why Choose IntellPharma?</h2>
                 <p className="section-subtitle">The preferred choice for thousands of medical stores across India.</p>
 
                 <div className="features-grid" style={{ marginTop: '3rem' }}>
                     <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>GST Compliant Billing</h3>
-                        <p style={{ color: 'var(--text-secondary)' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>GST Compliant Billing</h3>
+                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
                             Generate 100% accurate GST invoices. Our <strong>medical store billing software</strong> allows you to file GSTR-1 and GSTR-3B reports effortlessly.
                         </p>
                     </div>
                     <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Expiry Date Tracking</h3>
-                        <p style={{ color: 'var(--text-secondary)' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>Expiry Date Tracking</h3>
+                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
                             Stop losing money on expired medicines. Our <strong>inventory management system</strong> alerts you about near-expiry drugs so you can return or sell them on time.
                         </p>
                     </div>
                     <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Cloud-Based & Secure</h3>
-                        <p style={{ color: 'var(--text-secondary)' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>Cloud-Based & Secure</h3>
+                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
                             Access your shop data from anywhere. IntellPharma is the best <strong>cloud-based pharmacy software in India</strong>, offering bank-grade security and daily backups.
                         </p>
                     </div>
                     <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Affordable for Small Shops</h3>
-                        <p style={{ color: 'var(--text-secondary)' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>Affordable for Small Shops</h3>
+                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
                             Designed for everyone. Whether you strictly need <strong>billing software for a small medical shop</strong> or a multi-chain ERP, we have plans that fit your budget.
                         </p>
+                    </div>
+                </div>
+            </section>
+
+            {/* How It Works Section */}
+            <section className="how-it-works-section">
+                <h2 className="section-title" style={{ background: 'transparent', userSelect: 'none' }}>How It Works</h2>
+                <p className="section-subtitle">Get started in 3 simple steps</p>
+                <div className="steps-container">
+                    <div className="step-card">
+                        <div className="step-number">1</div>
+                        <h3>Sign Up Free</h3>
+                        <p>Create your account in under 60 seconds. No credit card required.</p>
+                    </div>
+                    <div className="step-card">
+                        <div className="step-number">2</div>
+                        <h3>Add Your Products</h3>
+                        <p>Import your inventory via Excel or add products manually with ease.</p>
+                    </div>
+                    <div className="step-card">
+                        <div className="step-number">3</div>
+                        <h3>Start Billing</h3>
+                        <p>Generate GST-compliant invoices and manage your pharmacy instantly.</p>
                     </div>
                 </div>
             </section>
@@ -200,11 +242,27 @@ export default function Landing() {
             {/* CTA Section */}
             <section className="cta-section">
                 <div className="cta-content">
-                    <h2>Ready to Get Started?</h2>
-                    <p>Join thousands of pharmacies already using IntellPharma</p>
+                   
+                    <h2>Ready to Transform Your Pharmacy?</h2>
+                    <p>Join 50+ pharmacies already growing with IntellPharma</p>
                     <button onClick={openRegister} className="btn btn-primary btn-lg">
+                        <Rocket size={20} />
                         Start Your Free Trial
                     </button>
+                    <div className="cta-features">
+                        <div className="cta-feature">
+                            <Check size={16} />
+                            <span>No credit card required</span>
+                        </div>
+                        <div className="cta-feature">
+                            <Check size={16} />
+                            <span>Full access to all features</span>
+                        </div>
+                        <div className="cta-feature">
+                            <Check size={16} />
+                            <span>Cancel anytime</span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
