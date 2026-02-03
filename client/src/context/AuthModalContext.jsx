@@ -16,10 +16,11 @@ export const AuthModalProvider = ({ children }) => {
 
     const openLogin = () => setModalType('login');
     const openRegister = () => setModalType('register');
+    const openForgotPassword = () => setModalType('forgot-password');
     const closeModal = () => setModalType(null);
 
     return (
-        <AuthModalContext.Provider value={{ modalType, openLogin, openRegister, closeModal }}>
+        <AuthModalContext.Provider value={{ modalType, openLogin, openRegister, openForgotPassword, closeModal }}>
             {children}
         </AuthModalContext.Provider>
     );

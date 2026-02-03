@@ -190,7 +190,7 @@ export default function PaymentSuccess() {
                             <button
                                 className="btn btn-secondary"
                                 onClick={() => navigate('/dashboard')}
-                            >
+                            >   
                                 Go to Dashboard
                             </button>
                         </div>

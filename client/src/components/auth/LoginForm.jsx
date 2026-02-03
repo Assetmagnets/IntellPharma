@@ -14,10 +14,13 @@ export default function LoginForm({ onSuccess, isModal = false }) {
     const navigate = useNavigate();
 
     // Try getting auth modal context, but don't fail if not present (for standalone page)
+    // Try getting auth modal context, but don't fail if not present (for standalone page)
     let openRegister;
+    let openForgotPassword;
     try {
         const modalContext = useAuthModal();
         openRegister = modalContext.openRegister;
+        openForgotPassword = modalContext.openForgotPassword;
     } catch (e) {
         // Ignore if not inside provider
     }
@@ -106,9 +109,20 @@ export default function LoginForm({ onSuccess, isModal = false }) {
                         <input type="checkbox" />
                         <span>Remember me</span>
                     </label>
-                    <Link to="/forgot-password" className="link" onClick={onSuccess}>
-                        Forgot password?
-                    </Link>
+                    {isModal && openForgotPassword ? (
+                        <button
+                            type="button"
+                            onClick={openForgotPassword}
+                            className="link"
+                            style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}
+                        >
+                            Forgot password?
+                        </button>
+                    ) : (
+                        <Link to="/forgot-password" className="link" onClick={onSuccess}>
+                            Forgot password?
+                        </Link>
+                    )}
                 </div>
 
                 <button

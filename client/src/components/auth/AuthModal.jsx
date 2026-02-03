@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { X, Sparkles } from 'lucide-react';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
+import ForgotPasswordForm from './ForgotPasswordForm';
 import { useAuthModal as useAuthModalContext } from '../../context/AuthModalContext';
 
 export default function AuthModal() {
@@ -76,20 +77,24 @@ export default function AuthModal() {
                     className={modalType === 'register' ? "modal-scroll-content" : "no-scrollbar"}
                     style={{ margin: 0, height: 'auto', maxHeight: '85vh', overflowY: 'auto', width: '100%', padding: '2.5rem 0' }}
                 >
-                    <div className="auth-header">
-                        <div className="auth-logo">
-                            <img src="/logo.png" alt="IntellPharma" className="auth-logo-img" />
-                            <span className="logo-text">IntellPharma</span>
+                    {(modalType === 'login' || modalType === 'register') && (
+                        <div className="auth-header">
+                            <div className="auth-logo">
+                                <img src="/logo.png" alt="IntellPharma" className="auth-logo-img" />
+                                <span className="logo-text">IntellPharma</span>
+                            </div>
+                            <h1>{modalType === 'login' ? 'Welcome Back' : 'Create Account'}</h1>
+                            <p>{modalType === 'login' ? 'Sign in to manage your pharmacy' : 'Start managing your pharmacy today'}</p>
                         </div>
-                        <h1>{modalType === 'login' ? 'Welcome Back' : 'Create Account'}</h1>
-                        <p>{modalType === 'login' ? 'Sign in to manage your pharmacy' : 'Start managing your pharmacy today'}</p>
-                    </div>
+                    )}
 
-                    <div style={{ padding: '0 2.5rem 2.5rem' }}>
+                    <div style={{ padding: modalType === 'forgot-password' ? '0' : '0 2.5rem 2.5rem' }}>
                         {modalType === 'login' ? (
                             <LoginForm onSuccess={closeModal} isModal={true} />
-                        ) : (
+                        ) : modalType === 'register' ? (
                             <RegisterForm onSuccess={closeModal} isModal={true} />
+                        ) : (
+                            <ForgotPasswordForm />
                         )}
                     </div>
 

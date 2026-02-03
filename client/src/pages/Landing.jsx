@@ -23,9 +23,9 @@ export default function Landing() {
     return (
         <div className="landing-page">
             <SEO
-                title="Best Pharmacy Management Software in India"
+                title="Best Smart Pharmacy Management System in India | IntellPharma"
                 description="IntellPharma is the #1 smart pharmacy management system in India. AI-driven inventory, GST billing, and expiry tracking for modern medical shops."
-                keywords="pharmacy management system, medical store software, pharma software india, best billing software for pharmacy, inventory management system, IntellPharma"
+                keywords="Smart Pharmacy Management System, Medical Store Software India, IntellPharma, Pharmacy Billing Software, Inventory Governance, Best Pharmacy Software"
                 canonicalUrl="/"
             />
             <div className="landing-bg">
@@ -39,14 +39,14 @@ export default function Landing() {
             <section className="hero-section">
                 <div className="hero-content">
                     <div className="hero-badge">
-                        <Sparkles size={16} /> #1 Pharmacy Software In India
+                        <Sparkles size={16} /> #1 Smart Pharmacy Software In India
                     </div>
                     <h1 className="hero-title">
                         India's Best Cloud-Based
-                        <span className="gradient-text"> Pharmacy Software</span>
+                        <span className="gradient-text"> Pharmacy Management System</span>
                     </h1>
                     <p className="hero-description">
-                        IntellPharma is the #1 <strong>online medical store management system</strong>. Automate inventory, GST billing, and expiry tracking with our AI-powered digital solution.
+                        IntellPharma is the leading <strong>Smart Pharmacy Management System</strong> & Medical Store Software. Automate inventory, GST billing, and expiry tracking with our AI-powered digital solution.
                     </p>
                     <div className="hero-actions">
                         <button onClick={openRegister} className="btn btn-primary btn-lg">
@@ -160,6 +160,39 @@ export default function Landing() {
                         </div>
                         <h3>Team Management</h3>
                         <p>Role-based access control for your entire staff</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* SEO Content Section - "Why Choose Us" */}
+            <section className="features-section" style={{ background: 'var(--surface-color)', paddingBottom: '4rem' }}>
+                <h2 className="section-title">Why Choose IntellPharma?</h2>
+                <p className="section-subtitle">The preferred choice for thousands of medical stores across India.</p>
+
+                <div className="features-grid" style={{ marginTop: '3rem' }}>
+                    <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>GST Compliant Billing</h3>
+                        <p style={{ color: 'var(--text-secondary)' }}>
+                            Generate 100% accurate GST invoices. Our <strong>medical store billing software</strong> allows you to file GSTR-1 and GSTR-3B reports effortlessly.
+                        </p>
+                    </div>
+                    <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Expiry Date Tracking</h3>
+                        <p style={{ color: 'var(--text-secondary)' }}>
+                            Stop losing money on expired medicines. Our <strong>inventory management system</strong> alerts you about near-expiry drugs so you can return or sell them on time.
+                        </p>
+                    </div>
+                    <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Cloud-Based & Secure</h3>
+                        <p style={{ color: 'var(--text-secondary)' }}>
+                            Access your shop data from anywhere. IntellPharma is the best <strong>cloud-based pharmacy software in India</strong>, offering bank-grade security and daily backups.
+                        </p>
+                    </div>
+                    <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Affordable for Small Shops</h3>
+                        <p style={{ color: 'var(--text-secondary)' }}>
+                            Designed for everyone. Whether you strictly need <strong>billing software for a small medical shop</strong> or a multi-chain ERP, we have plans that fit your budget.
+                        </p>
                     </div>
                 </div>
             </section>

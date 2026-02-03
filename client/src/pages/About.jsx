@@ -366,7 +366,7 @@ export default function About() {
             }}>
                 <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '3rem 6%', textAlign: 'center' }}>
                     <p style={{ color: '#94a3b8', marginBottom: '0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Trusted by 5,000+ Modern Pharmacies across India
+                        Trusted by 50+ Modern Pharmacies across India
                     </p>
 
                     <div className="logo-slider">
