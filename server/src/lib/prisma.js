@@ -1,4 +1,4 @@
-// Prisma Client Singleton for Medistock
+// Prisma Client Singleton for IntellPharma
 
 const { PrismaClient } = require('@prisma/client');
 

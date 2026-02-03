@@ -8,7 +8,7 @@ export default function Register() {
             <div className="auth-container register-container animate-slideUp">
                 <div className="auth-header">
                     <div className="auth-logo">
-                        <img src="/logo.png" alt="PharmaStock" className="auth-logo-img" />
+                        <img src="/logo.png" alt="IntellPharma" className="auth-logo-img" />
                         <span className="logo-text">IntellPharma</span>
                     </div>
                     <h1>Create Account</h1>

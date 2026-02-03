@@ -4,12 +4,12 @@ const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
     const [theme, setTheme] = useState(() => {
-        const saved = localStorage.getItem('medistock-theme');
+        const saved = localStorage.getItem('intellpharma-theme');
         return saved || 'light';
     });
 
     useEffect(() => {
-        localStorage.setItem('medistock-theme', theme);
+        localStorage.setItem('intellpharma-theme', theme);
         document.documentElement.setAttribute('data-theme', theme);
 
         // Update body class for easier CSS targeting

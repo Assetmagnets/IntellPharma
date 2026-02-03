@@ -18,7 +18,8 @@ import {
     Landmark,
     Wallet,
     ExternalLink,
-    Settings
+    Settings,
+    AlertCircle
 } from 'lucide-react';
 import '../styles/subscription.css';
 
@@ -68,8 +69,24 @@ export default function Subscription() {
             }
 
             // THEN get current subscription (now it has synced data)
-            const currentRes = await subscriptionAPI.getCurrent();
-            setCurrentSub(currentRes.data);
+            try {
+                const currentRes = await subscriptionAPI.getCurrent();
+                setCurrentSub(currentRes.data);
+            } catch (subErr) {
+                // If no subscription found (404), set a default BASIC subscription state
+                // so the UI still shows the current plan card with Add Extra Branch option
+                console.log('No subscription found, using default BASIC:', subErr);
+                setCurrentSub({
+                    plan: 'BASIC',
+                    planDetails: { name: 'Basic', price: 0 },
+                    maxBranches: 1,
+                    extraBranches: 0,
+                    aiEnabled: false,
+                    analyticsEnabled: false,
+                    autoRenew: false,
+                    usage: { branchCount: 1, maxBranches: 1, remaining: 0 }
+                });
+            }
 
         } catch (error) {
             console.error('Load subscription error:', error);
@@ -85,7 +102,7 @@ export default function Subscription() {
         }
 
         if (plan.id === 'ENTERPRISE') {
-            alert('Please contact sales@medistock.com for Enterprise pricing.');
+            alert('Please contact sales@intellpharma.com for Enterprise pricing.');
             return;
         }
 
@@ -143,14 +160,26 @@ export default function Subscription() {
     };
 
     const handleCancelRenewal = async () => {
-        if (!confirm('Are you sure you want to cancel auto-renewal?')) return;
+        if (!confirm('Are you sure you want to cancel auto-renewal? You will not be charged again after the current period ends.')) return;
 
         try {
-            await subscriptionAPI.cancelRenewal();
+            const response = await subscriptionAPI.cancelRenewal();
             loadSubscriptionData();
-            alert('Auto-renewal cancelled');
+            alert(response.data?.message || 'Auto-renewal cancelled');
         } catch (error) {
             alert(error.response?.data?.error || 'Failed to cancel renewal');
+        }
+    };
+
+    const handleReactivateRenewal = async () => {
+        if (!confirm('Reactivate auto-renewal? Your subscription will continue automatically and you will be charged on the next billing date.')) return;
+
+        try {
+            const response = await subscriptionAPI.reactivateRenewal();
+            loadSubscriptionData();
+            alert(response.data?.message || 'Auto-renewal reactivated!');
+        } catch (error) {
+            alert(error.response?.data?.error || 'Failed to reactivate renewal');
         }
     };
 
@@ -181,7 +210,11 @@ export default function Subscription() {
     };
 
     const hasActiveStripeSubscription = () => {
-        return stripeStatus?.hasSubscription && stripeStatus?.status === 'active';
+        // Check both stripeStatus and if currentSub has a stripeSubscriptionId (for extra branches)
+        // Also check if user has extraBranches > 0 since that means they paid via Stripe
+        return (stripeStatus?.hasSubscription && stripeStatus?.status === 'active') ||
+            (currentSub?.stripeSubscriptionId) ||
+            (currentSub?.extraBranches > 0);
     };
 
     const formatDate = (dateString) => {
@@ -231,16 +264,45 @@ export default function Subscription() {
                                     </div>
                                 </div>
 
-                                {/* Stripe Subscription Details */}
+                                {/* Billing Information */}
                                 {hasActiveStripeSubscription() && (
-                                    <div className="stripe-info">
-                                        <div className="stripe-detail">
-                                            <span className="label">Next billing date:</span>
-                                            <span className="value">{formatDate(stripeStatus.currentPeriodEnd)}</span>
+                                    <div className="billing-info-section">
+                                        <h4 className="billing-title"><CreditCard size={16} /> Billing Information</h4>
+                                        <div className="billing-grid">
+                                            <div className="billing-item">
+                                                <span className="billing-label">Status</span>
+                                                <span className={`billing-value status-${currentSub.autoRenew ? 'active' : 'cancelled'}`}>
+                                                    {currentSub.autoRenew ? '✓ Active' : '⚠ Set to Cancel'}
+                                                </span>
+                                            </div>
+                                            <div className="billing-item">
+                                                <span className="billing-label">Next Billing Date</span>
+                                                <span className="billing-value">
+                                                    {formatDate(stripeStatus?.currentPeriodEnd || currentSub.stripeCurrentPeriodEnd)}
+                                                </span>
+                                            </div>
+                                            {currentSub.extraBranches > 0 && (
+                                                <div className="billing-item">
+                                                    <span className="billing-label">Extra Branches</span>
+                                                    <span className="billing-value">
+                                                        {currentSub.extraBranches} × ₹{extraBranchPrice}/mo
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {(currentSub.planDetails?.price > 0 || currentSub.extraBranches > 0) && (
+                                                <div className="billing-item billing-total">
+                                                    <span className="billing-label">Monthly Total</span>
+                                                    <span className="billing-value billing-amount">
+                                                        ₹{(currentSub.planDetails?.price || 0) + (currentSub.extraBranches * extraBranchPrice)}/mo
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
-                                        {stripeStatus.cancelAtPeriodEnd && (
-                                            <div className="stripe-warning">
-                                                ⚠️ Subscription will cancel at period end
+                                        {!currentSub.autoRenew && (
+                                            <div className="billing-warning">
+                                                <AlertCircle size={16} />
+                                                Your subscription will end on {formatDate(stripeStatus?.currentPeriodEnd || currentSub.stripeCurrentPeriodEnd)}.
+                                                Click "Reactivate Auto-Renewal" to continue your subscription.
                                             </div>
                                         )}
                                     </div>
@@ -295,10 +357,16 @@ export default function Subscription() {
                                             `+ Add Extra Branches (₹${extraBranchPrice}/mo each)`
                                         )}
                                     </button>
-                                    {currentSub.autoRenew && !hasActiveStripeSubscription() && (
-                                        <button className="btn btn-ghost" onClick={handleCancelRenewal}>
-                                            Cancel Auto-Renewal
-                                        </button>
+                                    {hasActiveStripeSubscription() && (
+                                        currentSub.autoRenew ? (
+                                            <button className="btn btn-ghost" onClick={handleCancelRenewal}>
+                                                Cancel Auto-Renewal
+                                            </button>
+                                        ) : (
+                                            <button className="btn btn-primary" onClick={handleReactivateRenewal}>
+                                                Reactivate Auto-Renewal
+                                            </button>
+                                        )
                                     )}
                                 </div>
                             </div>
@@ -350,7 +418,7 @@ export default function Subscription() {
                                             <CheckCircle size={16} /> Current Plan
                                         </button>
                                     ) : plan.id === 'ENTERPRISE' ? (
-                                        <button className="btn btn-secondary w-full" onClick={() => alert('Contact sales@medistock.com for Enterprise pricing')}>
+                                        <button className="btn btn-secondary w-full" onClick={() => alert('Contact +91 9777295707 or sales@intellpharma.com for Enterprise pricing')}>
                                             Contact Sales
                                         </button>
                                     ) : isLowerOrEqualPlan(plan.id) ? (

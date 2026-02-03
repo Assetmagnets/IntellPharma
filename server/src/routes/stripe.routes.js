@@ -15,6 +15,9 @@ if (stripeSecretKey) {
     console.warn('⚠️  STRIPE_SECRET_KEY not set. Stripe payment features will not work.');
 }
 
+// Track processed sessions to prevent double-incrementing (idempotency)
+const processedSessions = new Set();
+
 // Middleware to check if Stripe is configured
 const requireStripe = (req, res, next) => {
     if (!stripe) {
@@ -34,11 +37,11 @@ const STRIPE_PRICES = {
 
 // Plan configuration with monthly prices (in paise/cents for Stripe)
 const PLAN_PRICES = {
-    BASIC: { price: 0, currency: 'inr', name: 'Basic Plan' },
-    PRO: { price: 99900, currency: 'inr', name: 'Pro Plan' },  // ₹999
-    PREMIUM: { price: 199900, currency: 'inr', name: 'Premium Plan' },  // ₹1999
-    ENTERPRISE: { price: null, currency: 'inr', name: 'Enterprise Plan' },  // Custom
-    EXTRA_BRANCH: { price: 49900, currency: 'inr', name: 'Extra Branch' } // ₹499
+    BASIC: { price: 0, currency: 'inr', name: 'IntellPharma Basic' },
+    PRO: { price: 99900, currency: 'inr', name: 'IntellPharma Pro' },  // ₹999
+    PREMIUM: { price: 199900, currency: 'inr', name: 'IntellPharma Premium' },  // ₹1999
+    ENTERPRISE: { price: null, currency: 'inr', name: 'IntellPharma Enterprise' },  // Custom
+    EXTRA_BRANCH: { price: 49900, currency: 'inr', name: 'IntellPharma Extra Branch' } // ₹499
 };
 
 // Create or get Stripe customer for user
@@ -98,75 +101,42 @@ router.post('/add-extra-branches', requireStripe, authenticate, authorize('OWNER
             limit: 1
         });
 
-        if (subscriptions.data.length > 0) {
-            // Case A: Valid Active Subscription - Add item to it
-            const subscription = subscriptions.data[0];
-
-            // Add new item for extra branches
-            await stripe.subscriptions.update(subscription.id, {
-                items: [
-                    ...subscription.items.data.map(item => ({ id: item.id })), // Keep existing items
-                    {
-                        price_data: {
-                            currency: planConfig.currency,
-                            product_data: {
-                                name: `${planConfig.name} (x${count})`, // e.g. "Extra Branch (x3)"
-                                description: `Additional ${count} branch(es) for Medistock`,
-                            },
-                            recurring: { interval: 'month' },
-                            unit_amount: planConfig.price, // ₹500 per unit
+        // Always redirect to Stripe Checkout for extra branches payment
+        const session = await stripe.checkout.sessions.create({
+            customer: customer.id,
+            mode: 'subscription',
+            line_items: [
+                {
+                    price_data: {
+                        currency: planConfig.currency,
+                        product_data: {
+                            name: planConfig.name,
+                            description: `${planConfig.name} - Monthly Subscription for ${count} branch(es)`,
                         },
-                        quantity: count,
-                    }
-                ],
-                proration_behavior: 'always_invoice', // Charge immediately for the remainder of cycle
-            });
-
-            // Update DB immediately
-            if (user.ownedBranches.length > 0) {
-                const sub = user.ownedBranches[0].subscription;
-                await prisma.subscription.update({
-                    where: { id: sub.id },
-                    data: { extraBranches: { increment: count } }
-                });
-            }
-
-            return res.json({
-                success: true,
-                message: `Successfully added ${count} extra branches to your subscription!`
-            });
-
-        } else {
-            // Case B: No Active Subscription - Create new Checkout Session for branches only
-            const session = await stripe.checkout.sessions.create({
-                customer: customer.id,
-                payment_method_types: ['card'],
-                mode: 'subscription',
-                line_items: [
-                    {
-                        price_data: {
-                            currency: planConfig.currency,
-                            product_data: {
-                                name: planConfig.name,
-                                description: 'Monthly subscription for extra branches',
-                            },
-                            recurring: { interval: 'month' },
-                            unit_amount: planConfig.price,
-                        },
-                        quantity: count,
+                        recurring: { interval: 'month' },
+                        unit_amount: planConfig.price,
                     },
-                ],
+                    quantity: count,
+                },
+            ],
+            metadata: {
+                userId: user.id,
+                type: 'EXTRA_BRANCH_ONLY',
+                count: String(count)
+            },
+            // Include type and count in success URL so frontend can immediately detect extra branch purchase
+            success_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment-success?session_id={CHECKOUT_SESSION_ID}&type=extra_branch&count=${count}`,
+            cancel_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment-cancel`,
+            subscription_data: {
                 metadata: {
                     userId: user.id,
                     type: 'EXTRA_BRANCH_ONLY',
-                    count: count
-                },
-                success_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment-cancel`,
-            });
+                    count: String(count)
+                }
+            }
+        });
 
-            return res.json({ url: session.url });
-        }
+        return res.json({ url: session.url });
 
     } catch (error) {
         console.error('Add extra branches error:', error);
@@ -219,7 +189,7 @@ router.post('/create-checkout-session', requireStripe, authenticate, authorize('
                         currency: planConfig.currency,
                         product_data: {
                             name: planConfig.name,
-                            description: `PharmaStock ${planConfig.name} - Monthly Subscription`,
+                            description: `${planConfig.name} - Monthly Subscription`,
                         },
                         recurring: {
                             interval: 'month',
@@ -292,7 +262,19 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
         }
 
         const subscription = subscriptions.data[0];
-        const planId = subscription.metadata.planId || 'PRO';
+
+        // Check if this is an extra branch subscription (no planId in metadata)
+        const isExtraBranch = subscription.metadata?.type === 'EXTRA_BRANCH_ONLY';
+
+        // For extra branch subscriptions, keep the current plan; otherwise use metadata or default
+        let planId;
+        if (isExtraBranch) {
+            // Get current plan from database, don't override it
+            const existingLocalSub = user.ownedBranches[0]?.subscription;
+            planId = existingLocalSub?.plan || 'BASIC';
+        } else {
+            planId = subscription.metadata?.planId || 'PRO';
+        }
 
         // SYNC: Update local database if Stripe has active subscription
         if (user.ownedBranches.length > 0) {
@@ -306,10 +288,10 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
                 ? new Date(periodEndTimestamp * 1000)
                 : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from now
 
-            // Check if local DB is out of sync with Stripe
-            const needsSync = !localSub ||
+            // Check if local DB is out of sync with Stripe (but not for extra branch subs)
+            const needsSync = !isExtraBranch && (!localSub ||
                 localSub.plan !== planId ||
-                localSub.stripeSubscriptionId !== subscription.id;
+                localSub.stripeSubscriptionId !== subscription.id);
 
             if (needsSync) {
                 console.log(`🔄 Syncing subscription for user ${user.id}: ${localSub?.plan || 'NONE'} -> ${planId}`);
@@ -389,16 +371,38 @@ router.get('/verify-session/:sessionId', requireStripe, authenticate, async (req
     try {
         const { sessionId } = req.params;
 
+        console.log('🔍 verify-session: Starting with sessionId:', sessionId);
+
         const session = await stripe.checkout.sessions.retrieve(sessionId, {
-            expand: ['subscription']
+            expand: ['subscription', 'subscription.items']
         });
+
+        console.log('🔍 verify-session: Session metadata:', session.metadata);
+        console.log('🔍 verify-session: Payment status:', session.payment_status);
 
         if (session.payment_status === 'paid' && session.subscription) {
             const subscription = session.subscription;
 
             // Handle Extra Branch Only checkout
+            console.log('🔍 verify-session: Checking metadata.type:', session.metadata?.type);
             if (session.metadata?.type === 'EXTRA_BRANCH_ONLY') {
                 const count = parseInt(session.metadata.count || '0');
+                console.log('✅ verify-session: EXTRA_BRANCH_ONLY detected! Count:', count);
+
+                // Idempotency check - prevent processing same session twice
+                if (processedSessions.has(sessionId)) {
+                    console.log('⚠️ verify-session: Session already processed, skipping increment');
+                    return res.json({
+                        success: true,
+                        type: 'EXTRA_BRANCH_ONLY',
+                        count: count,
+                        message: `Extra branch(es) already added!`,
+                        alreadyProcessed: true
+                    });
+                }
+
+                // Mark session as being processed
+                processedSessions.add(sessionId);
 
                 // Find user and update extraBranches
                 const user = await prisma.user.findUnique({
@@ -408,33 +412,71 @@ router.get('/verify-session/:sessionId', requireStripe, authenticate, async (req
 
                 if (user.ownedBranches.length > 0) {
                     const branch = user.ownedBranches[0];
-                    // Ensure subscription exists or create basic one
-                    await prisma.subscription.upsert({
-                        where: { branchId: branch.id },
-                        create: {
-                            branchId: branch.id,
-                            plan: 'BASIC',
-                            extraBranches: count,
-                            stripeSubscriptionId: subscription.id,
-                            stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-                            autoRenew: true
-                        },
-                        update: {
-                            extraBranches: { increment: count },
-                            // If they were on free basic, bind this new sub ID? 
-                            // Only if they didn't have a paying sub.
-                            // For simplicity, just increment extraBranches.
+                    const existingSub = branch.subscription;
+                    console.log('🔍 verify-session: Existing subscription:', existingSub);
+                    console.log('🔍 verify-session: Current extraBranches:', existingSub?.extraBranches || 0);
+
+                    // Update extraBranches and ensure stripeSubscriptionId is set
+                    let updatedSub;
+                    try {
+                        const periodEnd = subscription.current_period_end
+                            ? new Date(subscription.current_period_end * 1000)
+                            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+                        if (existingSub) {
+                            // Subscription exists - increment extraBranches
+                            // Also set stripeSubscriptionId if not already set (for Basic users)
+                            const updateData = {
+                                extraBranches: { increment: count },
+                                autoRenew: true
+                            };
+
+                            // Only set stripe fields if not already present
+                            if (!existingSub.stripeSubscriptionId) {
+                                updateData.stripeSubscriptionId = subscription.id;
+                                updateData.stripeCurrentPeriodEnd = periodEnd;
+                            }
+
+                            updatedSub = await prisma.subscription.update({
+                                where: { branchId: branch.id },
+                                data: updateData
+                            });
+                        } else {
+                            // No subscription exists, create new one
+                            updatedSub = await prisma.subscription.create({
+                                data: {
+                                    branchId: branch.id,
+                                    plan: 'BASIC',
+                                    maxBranches: 1,
+                                    extraBranches: count,
+                                    stripeSubscriptionId: subscription.id,
+                                    stripeCurrentPeriodEnd: periodEnd,
+                                    autoRenew: true
+                                }
+                            });
                         }
-                    });
+                        console.log('✅ verify-session: Updated subscription extraBranches:', updatedSub.extraBranches);
+                    } catch (dbError) {
+                        console.error('❌ verify-session: Database update FAILED:', dbError);
+                    }
                 }
 
                 return res.json({
                     success: true,
-                    message: `Successfully subscribed to ${count} extra branches!`
+                    type: 'EXTRA_BRANCH_ONLY',
+                    count: count,
+                    message: `Successfully subscribed to ${count} extra branch(es)!`
                 });
             }
 
-            const planId = session.metadata.planId || 'PRO';
+            const planId = session.metadata?.planId;
+
+            if (!planId) {
+                console.error('Missing planId in session metadata:', session.id);
+                // If specific type check failed and no planId, do NOT default to PRO.
+                // It's better to fail safe.
+                return res.status(400).json({ error: 'Invalid subscription session data.' });
+            }
 
             // Update user's subscription in database
             const user = await prisma.user.findUnique({

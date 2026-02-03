@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
@@ -382,7 +383,7 @@ const createTransporter = () => {
 
 // Generate 6-digit OTP
 function generateOTP() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return crypto.randomInt(100000, 1000000).toString();
 }
 
 // Send OTP email
@@ -397,12 +398,12 @@ async function sendOTPEmail(email, otp) {
     const transporter = createTransporter();
 
     const mailOptions = {
-        from: `"PharmaStock" <${process.env.EMAIL_USER}>`,
+        from: `"IntellPharma" <${process.env.EMAIL_USER}>`,
         to: email,
-        subject: 'Password Reset OTP - PharmaStock',
+        subject: 'Password Reset OTP - IntellPharma',
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #0066e6;">PharmaStock Password Reset</h2>
+                <h2 style="color: #0066e6;">IntellPharma Password Reset</h2>
                 <p>You requested to reset your password. Use the OTP below to proceed:</p>
                 <div style="background: #f5f5f5; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
                     <h1 style="color: #0066e6; letter-spacing: 8px; margin: 0;">${otp}</h1>

@@ -5,22 +5,33 @@ const { authenticate, authorize, requireBranchAccess, logAudit } = require('../m
 const router = express.Router();
 
 // Generate invoice number
-const generateInvoiceNumber = async (branchId) => {
+// Generate invoice number (Atomic)
+const generateInvoiceNumber = async (tx, branchId) => {
     const date = new Date();
-    const prefix = `INV${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const yearMonth = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const prefix = `INV${yearMonth}`;
 
-    const lastInvoice = await prisma.invoice.findFirst({
-        where: { invoiceNumber: { startsWith: prefix } },
-        orderBy: { invoiceNumber: 'desc' }
+    // Atomic increment using upsert
+    // This ensures that even if called in parallel, the database locks the row and increments safely
+    const sequence = await tx.invoiceSequence.upsert({
+        where: {
+            branchId_yearMonth: {
+                branchId,
+                yearMonth
+            }
+        },
+        update: {
+            seq: { increment: 1 }
+        },
+        create: {
+            branchId,
+            yearMonth,
+            seq: 1
+        }
     });
 
-    let sequence = 1;
-    if (lastInvoice) {
-        const lastSequence = parseInt(lastInvoice.invoiceNumber.slice(-6));
-        sequence = lastSequence + 1;
-    }
-
-    return `${prefix}${String(sequence).padStart(6, '0')}`;
+    // Format: INV202401000001
+    return `${prefix}${String(sequence.seq).padStart(6, '0')}`;
 };
 
 // Calculate GST
@@ -52,7 +63,8 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'PHARMACIS
         }
 
         const result = await prisma.$transaction(async (tx) => {
-            const invoiceNumber = await generateInvoiceNumber(branchId);
+            // Pass transaction object 'tx' so the increment happens inside the same robust transaction
+            const invoiceNumber = await generateInvoiceNumber(tx, branchId);
 
             let subtotal = 0;
             let totalCgst = 0;
@@ -68,18 +80,12 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'PHARMACIS
                     throw new Error(`Product not found: ${item.productId}`);
                 }
 
-                // Convert Prisma Decimals to Numbers for comparison and math
-                const currentStock = Number(product.quantity);
-                const requestedQty = Number(item.quantity);
+                const itemSubtotal = parseFloat(product.mrp) * item.quantity;
 
-                if (currentStock < requestedQty) {
-                    throw new Error(`Insufficient stock for ${product.name}. Available: ${currentStock}`);
-                }
+                // NEW LOGIC: Distribute global discount to item to reduce Taxable Amount
+                const globalDiscountPercent = parseFloat(discountPercent || 0);
+                const itemDiscountAmount = (itemSubtotal * globalDiscountPercent) / 100;
 
-                const itemSubtotal = parseFloat(product.mrp) * requestedQty;
-                // Item discount is also treated as percentage
-                const itemDiscountPercent = parseFloat(item.discount || 0);
-                const itemDiscountAmount = (itemSubtotal * itemDiscountPercent) / 100;
                 const taxableAmount = itemSubtotal - itemDiscountAmount;
                 const gst = calculateGST(taxableAmount, parseFloat(product.gstRate), isInterState);
                 const itemTotal = taxableAmount + gst.cgst + gst.sgst + gst.igst;
@@ -92,7 +98,7 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'PHARMACIS
                 invoiceItems.push({
                     productId: product.id,
                     productName: product.name,
-                    quantity: requestedQty,
+                    quantity: item.quantity,
                     unitPrice: product.mrp,
                     discount: itemDiscountAmount, // Store the calculated amount
                     gstRate: product.gstRate,
@@ -102,17 +108,30 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'PHARMACIS
                     total: itemTotal
                 });
 
-                // Update stock and auto-archive if zero
-                const newQuantity = currentStock - requestedQty;
-                const shouldArchive = newQuantity <= 0;
-
-                await tx.product.update({
-                    where: { id: product.id },
+                // Atomic Update: Decrement only if sufficient stock exists
+                // We use updateMany because it allows checking 'quantity >= requestedQty' in permission clause
+                const updateResult = await tx.product.updateMany({
+                    where: {
+                        id: product.id,
+                        quantity: {
+                            gte: item.quantity // Atomic check
+                        }
+                    },
                     data: {
-                        quantity: newQuantity,
-                        isActive: !shouldArchive // Deactivate if stock is 0 or less
+                        quantity: {
+                            decrement: item.quantity // Atomic decrement
+                        }
+                        // Note: We cannot conditionally toggle 'isActive' here easily.
+                        // It is better to have 0 stock than to have negative stock.
                     }
                 });
+
+                if (updateResult.count === 0) {
+                    // Refetch to give helpful error message
+                    const currentProduct = await tx.product.findUnique({ where: { id: item.productId } });
+                    const available = currentProduct ? Number(currentProduct.quantity) : 0;
+                    throw new Error(`Insufficient stock for ${product.name}. Available: ${available}, Requested: ${item.quantity}`);
+                }
             }
 
             // Calculate overall discount from percentage

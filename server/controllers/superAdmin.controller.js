@@ -7,7 +7,12 @@ exports.createSuperAdmin = async (req, res) => {
         const { name, email, password, secretKey } = req.body;
 
         // Hardcoded secret for safety - in production use env var
-        const REQUIRED_SECRET = process.env.SUPER_ADMIN_SECRET || 'IntellPharmaSuperSecret2026';
+        const REQUIRED_SECRET = process.env.SUPER_ADMIN_SECRET;
+
+        if (!REQUIRED_SECRET) {
+            console.error('SUPER_ADMIN_SECRET is not set in environment variables.');
+            return res.status(500).json({ error: 'Server configuration error. Contact administrator.' });
+        }
 
         if (secretKey !== REQUIRED_SECRET) {
             return res.status(403).json({ error: 'Invalid secret key' });
@@ -42,7 +47,23 @@ exports.createSuperAdmin = async (req, res) => {
 // Get Global Platform Stats
 exports.getGlobalStats = async (req, res) => {
     try {
-        const [totalPharmacies, totalUsers, activeSubscriptions, totalInvoices] = await Promise.all([
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const [
+            totalPharmacies,
+            totalUsers,
+            activeSubscriptions,
+            totalInvoices,
+            priorPharmacies,
+            priorUsers,
+            priorInvoices,
+            newSubscriptions,
+            newPharmacies,
+            newUsers,
+            newInvoices
+        ] = await Promise.all([
             prisma.branch.count(),
             prisma.user.count(),
             prisma.subscription.count({
@@ -52,14 +73,30 @@ exports.getGlobalStats = async (req, res) => {
                     }
                 }
             }),
-            prisma.invoice.count()
+            prisma.invoice.count(),
+            // Counts before this month (for verification/percentages if needed)
+            prisma.branch.count({ where: { createdAt: { lt: startOfMonth } } }),
+            prisma.user.count({ where: { createdAt: { lt: startOfMonth } } }),
+            prisma.invoice.count({ where: { createdAt: { lt: startOfMonth } } }),
+            // New items this month
+            prisma.subscription.count({ where: { createdAt: { gte: startOfMonth } } }),
+            prisma.branch.count({ where: { createdAt: { gte: startOfMonth } } }),
+            prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
+            prisma.invoice.count({ where: { createdAt: { gte: startOfMonth } } })
         ]);
 
         res.json({
             totalPharmacies,
             totalUsers,
             activeSubscriptions,
-            totalInvoices
+            totalInvoices,
+            priorPharmacies,
+            priorUsers,
+            priorInvoices,
+            newSubscriptions,
+            newPharmacies,
+            newUsers,
+            newInvoices
         });
     } catch (error) {
         console.error('Get stats error:', error);

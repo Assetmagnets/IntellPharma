@@ -5,7 +5,7 @@ export default function PublicFooter() {
         <footer className="landing-footer">
             <div className="footer-content">
                 <div className="footer-brand">
-                    <img src="/logo.png" alt="Medistock" className="footer-logo" />
+                    <img src="/logo.png" alt="IntellPharma" className="footer-logo" />
                     <span>IntellPharma</span>
                 </div>
                 <p style={{ color: "#BFC3D6" }}>

@@ -64,11 +64,11 @@
 .auth-header h1 {
     font-size: 1.5rem;
     margin-bottom: var(--spacing-xs);
-    color: var(--dark-text);
+    color: #f8fafc !important;
 }
 
 .auth-header p {
-    color: var(--dark-text-secondary);
+    color: #94a3b8 !important;
 }
 
 .auth-form {
@@ -205,11 +205,12 @@
 .auth-page .glass-input,
 .auth-container .form-input,
 .auth-container .glass-input {
-    background: rgba(15, 23, 42, 0.6) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
     color: #f8fafc !important;
     backdrop-filter: blur(10px);
-    border-radius: 12px;
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 10px;
     padding: 0.75rem 1rem;
     transition: all 0.3s ease;
 }
@@ -218,9 +219,11 @@
 .auth-page .glass-input:focus,
 .auth-container .form-input:focus,
 .auth-container .glass-input:focus {
-    border-color: var(--primary-500) !important;
-    box-shadow: 0 0 0 4px rgba(0, 102, 230, 0.15) !important;
-    background: rgba(15, 23, 42, 0.8) !important;
+    border-color: #0066e6 !important;
+    box-shadow: 0 0 0 3px rgba(0, 102, 230, 0.25) !important;
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    outline: none !important;
 }
 
 .auth-page .form-input::placeholder,
@@ -246,14 +249,17 @@
 
 /* Modal Specific Overrides */
 .modal-overlay {
-    background: rgba(0, 0, 0, 0.7) !important;
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .auth-container {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+    background: #0f172a !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid #334155 !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5) !important;
 }
 
 .auth-header h1 {

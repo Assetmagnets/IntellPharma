@@ -52,32 +52,32 @@ export default function SuperAdminDashboard() {
                     iconBg="gradient-primary"
                     label="Total Pharmacies"
                     value={stats?.totalPharmacies || 0}
-                    change="+12% this month"
-                    changeType="positive"
+                    change={stats?.newPharmacies > 0 ? `+${stats.newPharmacies} new this month` : 'No new pharmacies'}
+                    changeType={stats?.newPharmacies > 0 ? 'positive' : 'neutral'}
                 />
                 <StatsCard
                     icon={Users}
                     iconBg="gradient-accent"
                     label="Total Users"
                     value={stats?.totalUsers || 0}
-                    change="+25% this month"
-                    changeType="positive"
+                    change={stats?.newUsers > 0 ? `+${stats.newUsers} new this month` : 'No new users'}
+                    changeType={stats?.newUsers > 0 ? 'positive' : 'neutral'}
                 />
                 <StatsCard
                     icon={Shield}
                     iconBg="bg-warning"
                     label="Active Subscriptions"
                     value={stats?.activeSubscriptions || 0}
-                    change="98% retention"
-                    changeType="positive"
+                    change={stats?.newSubscriptions > 0 ? `+${stats.newSubscriptions} new this month` : 'No new subs'}
+                    changeType={stats?.newSubscriptions > 0 ? 'positive' : 'neutral'}
                 />
                 <StatsCard
                     icon={CreditCard}
                     iconBg="bg-error"
                     label="Invoices Generated"
                     value={stats?.totalInvoices || 0}
-                    change="+8% from last week"
-                    changeType="positive"
+                    change={stats?.newInvoices > 0 ? `+${stats.newInvoices} this month` : 'No new invoices'}
+                    changeType={stats?.newInvoices > 0 ? 'positive' : 'neutral'}
                 />
             </div>
 

@@ -358,7 +358,7 @@ export default function Reports() {
         doc.setTextColor(200, 200, 200);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        doc.text('PHARMASTOCK ENTERPRISE REPORTING', 205, 5.5, { align: 'right' });
+        doc.text('INTELLPHARMA ENTERPRISE REPORTING', 205, 5.5, { align: 'right' });
 
         // 2. Wide Main Header Bar
         // Height: 32mm (Starts at y=8)
@@ -378,7 +378,7 @@ export default function Reports() {
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(22);
-        doc.text('PHARMASTOCK', 40, 22);
+        doc.text('INTELLPHARMA', 40, 22);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
@@ -598,7 +598,7 @@ export default function Reports() {
         doc.setFontSize(8);
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
-            doc.text(`PharmaStock Premium Report | Page ${i} of ${pageCount}`, 14, 294.5);
+            doc.text(`IntellPharma Premium Report | Page ${i} of ${pageCount}`, 14, 294.5);
             doc.text('Confidential Document', 196, 294.5, { align: 'right' });
         }
 
@@ -735,7 +735,7 @@ export default function Reports() {
         doc.rect(0, 287, 210, 10, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(8);
-        doc.text('PharmaStock Modern Report', 14, 293);
+        doc.text('IntellPharma Modern Report', 14, 293);
         doc.text(`Page 1 of 1`, 196, 293, { align: 'right' });
 
         if (returnDoc) return doc;

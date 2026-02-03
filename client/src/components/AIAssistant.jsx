@@ -32,7 +32,7 @@ export default function AIAssistant({ isLocked }) {
     const [messages, setMessages] = useState([
         {
             type: 'ai',
-            text: `Hello ${user.name}! I'm your PharmaStock AI assistant. How can I help you today?`,
+            text: `Hello ${user.name}! I'm your IntellPharma AI assistant. How can I help you today?`,
             timestamp: new Date()
         }
     ]);
@@ -46,13 +46,9 @@ export default function AIAssistant({ isLocked }) {
     const [parsedData, setParsedData] = useState(null);
     const [processingCommand, setProcessingCommand] = useState(false);
 
-    // Suggested Prompts
-    const suggestions = [
-        { text: "What are my top selling products?", category: "Analytics", desc: "Sales analysis" },
-        { text: "Show me items running low on stock", category: "Inventory", desc: "Stock alerts" },
-        { text: "What is my total revenue today?", category: "Finance", desc: "Daily sales" },
-        { text: "List products expiring this month", category: "Inventory", desc: "Expiry check" }
-    ];
+    // Suggested Prompts - fetched from API
+    const [suggestions, setSuggestions] = useState([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
     useEffect(() => {
         if (!isLocked) {
@@ -64,11 +60,38 @@ export default function AIAssistant({ isLocked }) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // Fetch smart suggestions when chat opens
+    const fetchSuggestions = async () => {
+        if (loadingSuggestions || suggestions.length > 0) return;
+        setLoadingSuggestions(true);
+        try {
+            const res = await aiAPI.getSuggestions({ branchId: currentBranch?.id });
+            const formattedSuggestions = (res.data || []).map(s => ({
+                text: s.prompt,
+                category: s.category,
+                desc: s.description,
+                priority: s.priority || 'medium'
+            }));
+            setSuggestions(formattedSuggestions);
+        } catch (error) {
+            console.error('Failed to fetch suggestions:', error);
+            // Fallback to defaults
+            setSuggestions([
+                { text: "What are my top selling products?", category: "Analytics", desc: "Sales analysis", priority: 'medium' },
+                { text: "Show me items running low on stock", category: "Inventory", desc: "Stock alerts", priority: 'medium' },
+                { text: "What is my total revenue today?", category: "Finance", desc: "Daily sales", priority: 'medium' }
+            ]);
+        } finally {
+            setLoadingSuggestions(false);
+        }
+    };
+
     const handleOpen = () => {
         if (isLocked) {
             setShowUpgradeModal(true);
         } else {
             setIsOpen(true);
+            fetchSuggestions(); // Fetch suggestions when chat opens
         }
     };
 
@@ -306,14 +329,20 @@ export default function AIAssistant({ isLocked }) {
                                     {/* Suggestions Dropdown */}
                                     {showSuggestions && (
                                         <div className="suggestions-dropdown">
-                                            <div className="suggestions-header">Suggested Prompts</div>
-                                            {suggestions.map((s, i) => (
+                                            <div className="suggestions-header">
+                                                Smart Suggestions
+                                                {loadingSuggestions && <Loader2 size={14} className="animate-spin ml-2" />}
+                                            </div>
+                                            {suggestions.slice(0, 6).map((s, i) => (
                                                 <button
                                                     key={i}
-                                                    className="suggestion-item"
+                                                    className={`suggestion-item ${s.priority === 'high' ? 'priority-high' : ''}`}
                                                     onClick={() => handleSuggestionClick(s.text)}
                                                 >
                                                     <div className="flex items-center gap-2">
+                                                        {s.priority === 'high' && (
+                                                            <AlertTriangle size={14} className="text-warning" />
+                                                        )}
                                                         <span className="suggestion-category">{s.category}</span>
                                                         <span className="suggestion-text">{s.text}</span>
                                                     </div>

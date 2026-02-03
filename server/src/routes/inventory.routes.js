@@ -137,7 +137,24 @@ router.get('/:branchId', authenticate, requireBranchAccess, async (req, res) => 
         }
 
         if (lowStock === 'true') {
-            where.quantity = { lte: prisma.product.fields.minStock };
+            // Prisma findMany cannot compare two columns (quantity <= minStock), so we use raw query
+            const searchTerm = search ? `%${search.trim()}%` : '%';
+
+            const products = await prisma.$queryRaw`
+                SELECT * FROM "Product"
+                WHERE "branchId" = ${branchId}
+                AND "isActive" = true
+                AND "quantity" <= "minStock"
+                AND (
+                    "name" ILIKE ${searchTerm} OR 
+                    "genericName" ILIKE ${searchTerm} OR 
+                    "barcode" ILIKE ${searchTerm}
+                )
+                ORDER BY "name" ASC
+            `;
+
+            console.log('Found low stock products:', products.length);
+            return res.json(products);
         }
 
         if (expired === 'true') {
@@ -290,22 +307,30 @@ router.patch('/:branchId/:productId/stock', authenticate, authorize('OWNER', 'MA
         const { branchId, productId } = req.params;
         const { quantity, operation } = req.body; // operation: 'add' or 'set'
 
-        const currentProduct = await prisma.product.findUnique({ where: { id: productId } });
-
+        let product;
         let newQuantity;
-        if (operation === 'add') {
-            newQuantity = Number(currentProduct.quantity) + parseFloat(quantity);
-        } else {
-            newQuantity = parseFloat(quantity);
-        }
 
-        const product = await prisma.product.update({
-            where: { id: productId },
-            data: {
-                quantity: newQuantity,
-                isActive: newQuantity > 0 // Deactivate if 0, Activate if > 0 (restock)
-            }
-        });
+        if (operation === 'add') {
+            // Atomic increment for adding stock
+            product = await prisma.product.update({
+                where: { id: productId },
+                data: {
+                    quantity: { increment: parseFloat(quantity) },
+                    isActive: true // Always reactivate on restock
+                }
+            });
+            newQuantity = Number(product.quantity);
+        } else {
+            // "Set" operation covers override, so atomic is less critical as user intends to force a value
+            newQuantity = parseFloat(quantity);
+            product = await prisma.product.update({
+                where: { id: productId },
+                data: {
+                    quantity: newQuantity,
+                    isActive: newQuantity > 0
+                }
+            });
+        }
 
         await logAudit(req.user.id, branchId, 'STOCK_UPDATE', 'Product', product.id,
             `Stock ${operation}: ${quantity}, New total: ${newQuantity}`, req.ip);

@@ -32,30 +32,218 @@ const defaultPrompts = {
     ]
 };
 
-// Process AI prompt with Gemini
+// Diagnostic: List available Gemini models
+router.get('/models', authenticate, async (req, res) => {
+    try {
+        const { GoogleGenerativeAI } = require("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+        // Try to list models
+        const models = [];
+        for await (const model of genAI.listModels()) {
+            models.push({
+                name: model.name,
+                displayName: model.displayName,
+                supportedGenerationMethods: model.supportedGenerationMethods
+            });
+        }
+
+        res.json({
+            apiKeySet: !!process.env.GEMINI_API_KEY,
+            apiKeyPrefix: process.env.GEMINI_API_KEY?.substring(0, 10) + '...',
+            models
+        });
+    } catch (error) {
+        console.error('List models error:', error);
+        res.status(500).json({
+            error: error.message,
+            apiKeySet: !!process.env.GEMINI_API_KEY,
+            hint: 'Your API key may be invalid or not enabled for Generative AI'
+        });
+    }
+});
+// Process AI prompt with Gemini - Professional & Comprehensive
 router.post('/prompt', authenticate, requireFeature('ai'), async (req, res) => {
     try {
         const { prompt, branchId, context } = req.body;
         const startTime = Date.now();
+        const lowerPrompt = prompt.toLowerCase();
 
         // Initialize Gemini
         const { GoogleGenerativeAI } = require("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // Construct context-aware prompt
+        // Smart keyword detection
+        const keywords = {
+            inventory: ['stock', 'inventory', 'product', 'medicine', 'item', 'quantity', 'available'],
+            lowStock: ['low stock', 'reorder', 'stock alert', 'running out', 'shortage', 'less', 'below'],
+            expiry: ['expir', 'expire', 'expiry', 'expired', 'shelf life', 'date'],
+            sales: ['sale', 'revenue', 'income', 'earning', 'sold', 'billing', 'invoice'],
+            topSelling: ['top sell', 'best sell', 'popular', 'most sold', 'trending', 'highest'],
+            today: ['today', 'daily', 'this day'],
+            weekly: ['week', 'weekly', 'last 7 days'],
+            monthly: ['month', 'monthly', 'last 30 days'],
+            customer: ['customer', 'client', 'buyer', 'patient'],
+            profit: ['profit', 'margin', 'earning', 'gain'],
+            search: ['find', 'search', 'look for', 'where is', 'do we have', 'check']
+        };
+
+        const detectIntent = (text) => {
+            const detected = {};
+            for (const [key, words] of Object.entries(keywords)) {
+                detected[key] = words.some(word => text.includes(word));
+            }
+            return detected;
+        };
+
+        const intent = detectIntent(lowerPrompt);
+        let dataContext = {};
+
+        if (branchId) {
+            // Always fetch baseline shop statistics
+            const [totalProducts, totalInvoices, branch] = await Promise.all([
+                prisma.product.count({ where: { branchId, isActive: true } }).catch(() => 0),
+                prisma.invoice.count({ where: { branchId } }).catch(() => 0),
+                prisma.branch.findUnique({ where: { id: branchId }, select: { name: true } }).catch(() => null)
+            ]);
+
+            dataContext.shopInfo = {
+                branchName: branch?.name || 'Unknown',
+                totalProducts,
+                totalInvoices
+            };
+
+            // Low Stock Products
+            if (intent.lowStock || intent.inventory) {
+                const lowStockProducts = await prisma.product.findMany({
+                    where: { branchId, isActive: true, quantity: { lte: 10 } },
+                    select: { name: true, genericName: true, quantity: true, minStock: true, mrp: true, manufacturer: true },
+                    orderBy: { quantity: 'asc' },
+                    take: 15
+                });
+                if (lowStockProducts.length > 0) {
+                    dataContext.lowStockProducts = lowStockProducts;
+                    dataContext.lowStockCount = lowStockProducts.length;
+                }
+            }
+
+            // Expiring Products
+            if (intent.expiry) {
+                const expiringProducts = await prisma.product.findMany({
+                    where: {
+                        branchId, isActive: true,
+                        expiryDate: { lte: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), gte: new Date() }
+                    },
+                    select: { name: true, quantity: true, expiryDate: true, mrp: true, batchNumber: true },
+                    orderBy: { expiryDate: 'asc' },
+                    take: 15
+                });
+                if (expiringProducts.length > 0) {
+                    dataContext.expiringProducts = expiringProducts;
+                }
+            }
+
+            // Sales & Invoices
+            if (intent.sales || intent.today) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const todayInvoices = await prisma.invoice.findMany({
+                    where: { branchId, createdAt: { gte: today } },
+                    select: { invoiceNumber: true, totalAmount: true, paymentMethod: true, customerName: true, createdAt: true },
+                    orderBy: { createdAt: 'desc' },
+                    take: 10
+                });
+
+                const totalRevenue = todayInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+                dataContext.todaySales = {
+                    invoiceCount: todayInvoices.length,
+                    totalRevenue: `₹${totalRevenue.toFixed(2)}`,
+                    recentInvoices: todayInvoices.slice(0, 5)
+                };
+            }
+
+            // Top Selling Products
+            if (intent.topSelling) {
+                const topProducts = await prisma.invoiceItem.groupBy({
+                    by: ['productId'],
+                    where: { invoice: { branchId } },
+                    _sum: { quantity: true },
+                    orderBy: { _sum: { quantity: 'desc' } },
+                    take: 10
+                });
+
+                const productIds = topProducts.map(p => p.productId);
+                const products = await prisma.product.findMany({
+                    where: { id: { in: productIds } },
+                    select: { id: true, name: true, mrp: true, manufacturer: true }
+                });
+
+                dataContext.topSellingProducts = topProducts.map(tp => {
+                    const product = products.find(p => p.id === tp.productId);
+                    return { name: product?.name || 'Unknown', totalSold: tp._sum.quantity, price: `₹${product?.mrp || 0}` };
+                });
+            }
+
+            // Product Search
+            if (intent.search) {
+                // Extract potential product name from query
+                const searchTerms = lowerPrompt.replace(/find|search|look for|where is|do we have|check|the|a|an/gi, '').trim();
+                if (searchTerms.length > 2) {
+                    const foundProducts = await prisma.product.findMany({
+                        where: {
+                            branchId, isActive: true,
+                            OR: [
+                                { name: { contains: searchTerms, mode: 'insensitive' } },
+                                { genericName: { contains: searchTerms, mode: 'insensitive' } }
+                            ]
+                        },
+                        select: { name: true, genericName: true, quantity: true, mrp: true, expiryDate: true, manufacturer: true },
+                        take: 10
+                    });
+                    if (foundProducts.length > 0) {
+                        dataContext.searchResults = foundProducts;
+                    }
+                }
+            }
+        }
+
+        // Professional system prompt - STRICT about using real data only
         const systemContext = `
-            You are an AI assistant for a pharmacy management system called PharmaStock.
-            User Role: ${req.user.role}
-            Current Branch ID: ${branchId || 'Global'}
-            Context Data: ${JSON.stringify(context || {})}
-            
-            Answer the user's question concisely and professionally. 
-            If specific data is needed that isn't provided, explain what you would need.
-            Format lists using markdown.
-        `;
+You are **IntellPharma AI**, a pharmacy management assistant.
 
-        const fullPrompt = `${systemContext}\n\nUser Query: ${prompt}`;
+⚠️ **CRITICAL RULES - YOU MUST FOLLOW:**
+1. ONLY use the EXACT data provided below - DO NOT invent or generate fake product names, quantities, or any data
+2. If no data is provided, say "No data found" or ask the user to rephrase
+3. NEVER make up medicine names or numbers - only show what's in the database
+4. Format the provided data in a readable table or list format
+
+**Shop:** ${dataContext.shopInfo?.branchName || 'Unknown'} 
+**Total Products:** ${dataContext.shopInfo?.totalProducts || 0}
+**Total Invoices:** ${dataContext.shopInfo?.totalInvoices || 0}
+
+${Object.keys(dataContext).filter(k => k !== 'shopInfo').length > 0 ? `
+═══════════════════════════════════════
+📊 **ACTUAL DATABASE DATA (USE ONLY THIS):**
+═══════════════════════════════════════
+${JSON.stringify(dataContext, null, 2)}
+═══════════════════════════════════════
+
+Format this data nicely using markdown tables. Show ALL items from the data above.
+` : `
+No specific data was fetched. The user should ask about:
+- "low stock" or "inventory" for stock alerts
+- "expiring" for products near expiry
+- "sales" or "today" for revenue data  
+- "top selling" for popular products
+- "find [name]" to search for a specific product
+
+Tell the user what keywords to use to get data.
+`}
+`;
+
+        const fullPrompt = `${systemContext}\n\n**User Query:** ${prompt}`;
 
         const result = await model.generateContent(fullPrompt);
         const response = await result.response;
@@ -65,22 +253,35 @@ router.post('/prompt', authenticate, requireFeature('ai'), async (req, res) => {
 
         // Store prompt history
         await prisma.promptHistory.create({
-            data: {
-                prompt,
-                response: responseText,
-                executionTime,
-                userId: req.user.id,
-                branchId
-            }
-        });
+            data: { prompt, response: responseText, executionTime, userId: req.user.id, branchId }
+        }).catch(() => { }); // Don't fail if history save fails
 
         res.json({
             response_text: responseText,
-            execution_time: executionTime
+            execution_time: executionTime,
+            data_fetched: Object.keys(dataContext).filter(k => k !== 'shopInfo')
         });
     } catch (error) {
         console.error('AI prompt error:', error);
-        res.status(500).json({ error: 'Failed to process prompt. Ensure GEMINI_API_KEY is set.' });
+
+        // Graceful error response
+        const fallbackResponse = `I apologize, but I encountered an issue processing your request. 
+
+**Possible reasons:**
+- Temporary connection issue
+- Invalid query format
+
+**Please try:**
+- Rephrasing your question
+- Being more specific about what you need
+
+If the issue persists, please contact support.`;
+
+        res.status(500).json({
+            response_text: fallbackResponse,
+            error: true,
+            message: error.message
+        });
     }
 });
 
@@ -91,7 +292,7 @@ router.post('/parse-bill', authenticate, requireFeature('ai'), async (req, res) 
 
         const { GoogleGenerativeAI } = require("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const prompt = `
             Extract medicines/products, quantities, and prices (if available) from the following text.
@@ -144,10 +345,86 @@ router.get('/prompt-history', authenticate, requireFeature('ai'), async (req, re
     }
 });
 
-// Get suggested prompts based on role
+// Get smart suggested prompts based on role AND real database data
 router.get('/suggested-prompts', authenticate, requireFeature('ai'), async (req, res) => {
     try {
         const role = req.user.role;
+        const { branchId } = req.query;
+
+        // Fetch real data to generate smart suggestions
+        let smartSuggestions = [];
+
+        if (branchId) {
+            // Get real counts from database
+            const [lowStockCount, expiringCount, todayInvoices] = await Promise.all([
+                prisma.product.count({
+                    where: {
+                        branchId,
+                        isActive: true,
+                        quantity: { lte: 10 } // Using fixed threshold as we can't compare columns easily
+                    }
+                }).catch(() => 0),
+                prisma.product.count({
+                    where: {
+                        branchId,
+                        isActive: true,
+                        expiryDate: {
+                            lte: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
+                            gte: new Date()
+                        }
+                    }
+                }).catch(() => 0),
+                prisma.invoice.count({
+                    where: {
+                        branchId,
+                        createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+                    }
+                }).catch(() => 0)
+            ]);
+
+            // Generate smart suggestions based on real data
+            if (lowStockCount > 0) {
+                smartSuggestions.push({
+                    prompt: `Show me the ${lowStockCount} low stock items that need reordering`,
+                    description: `${lowStockCount} products are below minimum stock`,
+                    category: 'Inventory',
+                    priority: lowStockCount > 10 ? 'high' : 'medium'
+                });
+            }
+
+            if (expiringCount > 0) {
+                smartSuggestions.push({
+                    prompt: `List ${expiringCount} products expiring in the next 60 days`,
+                    description: `${expiringCount} products need attention`,
+                    category: 'Inventory',
+                    priority: 'high'
+                });
+            }
+
+            if (todayInvoices > 0) {
+                smartSuggestions.push({
+                    prompt: `Analyze today's ${todayInvoices} invoices and show sales summary`,
+                    description: `${todayInvoices} invoices created today`,
+                    category: 'Sales',
+                    priority: 'medium'
+                });
+            }
+        }
+
+        // Get user's recent prompts for personalized suggestions
+        const recentPrompts = await prisma.promptHistory.findMany({
+            where: { userId: req.user.id },
+            orderBy: { createdAt: 'desc' },
+            take: 3,
+            select: { prompt: true, createdAt: true }
+        });
+
+        const recentSuggestions = recentPrompts.map(p => ({
+            prompt: p.prompt,
+            description: `Asked ${new Date(p.createdAt).toLocaleDateString()}`,
+            category: 'Recent',
+            priority: 'low'
+        }));
 
         // Get custom prompts from database
         const customPrompts = await prisma.suggestedPrompt.findMany({
@@ -155,16 +432,19 @@ router.get('/suggested-prompts', authenticate, requireFeature('ai'), async (req,
                 isActive: true,
                 roles: { has: role }
             }
-        });
+        }).catch(() => []);
 
-        // Combine with defaults
+        // Combine all suggestions: Smart (data-driven) > Recent > Custom > Default
         const suggestions = [
-            ...(defaultPrompts[role] || defaultPrompts.BILLING_STAFF),
+            ...smartSuggestions,
+            ...recentSuggestions,
             ...customPrompts.map(p => ({
                 prompt: p.prompt,
                 description: p.description,
-                category: p.category
-            }))
+                category: p.category,
+                priority: 'medium'
+            })),
+            ...(defaultPrompts[role] || defaultPrompts.BILLING_STAFF)
         ];
 
         res.json(suggestions);

@@ -78,7 +78,7 @@ export default function AuthModal() {
                 >
                     <div className="auth-header">
                         <div className="auth-logo">
-                            <img src="/logo.png" alt="Medistock" className="auth-logo-img" />
+                            <img src="/logo.png" alt="IntellPharma" className="auth-logo-img" />
                             <span className="logo-text">IntellPharma</span>
                         </div>
                         <h1>{modalType === 'login' ? 'Welcome Back' : 'Create Account'}</h1>

@@ -38,8 +38,28 @@ export default function Billing() {
     const searchInputRef = useRef(null);
     const barcodeInputRef = useRef(null);
 
+    // Helper to check expiry status
+    const getExpiryStatus = (dateString) => {
+        if (!dateString) return { status: 'good', color: 'var(--text-muted)' };
+
+        const expiryDate = new Date(dateString);
+        const today = new Date();
+        const ninetyDaysFromNow = new Date();
+        ninetyDaysFromNow.setDate(today.getDate() + 90);
+
+        if (expiryDate < today) {
+            return { status: 'expired', color: 'var(--error)', text: 'Expired' };
+        } else if (expiryDate <= ninetyDaysFromNow) {
+            return { status: 'expiring', color: 'var(--warning)', text: 'Expiring Soon' };
+        }
+        return { status: 'good', color: 'var(--success)', text: 'Good' };
+    };
+
     useEffect(() => {
-        if (searchInputRef.current) {
+        // Prefer barcode input focus over search input if it exists
+        if (barcodeInputRef.current) {
+            barcodeInputRef.current.focus();
+        } else if (searchInputRef.current) {
             searchInputRef.current.focus();
         }
     }, []);
@@ -67,16 +87,28 @@ export default function Billing() {
 
     // Barcode scan handler
     const handleBarcodeScan = async (e) => {
-        if (e.key === 'Enter' && e.target.value) {
-            const barcode = e.target.value.trim();
-            try {
-                const res = await inventoryAPI.findProduct(currentBranch?.id, { barcode });
-                if (res.data) {
-                    addToCart(res.data);
-                    e.target.value = '';
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent form submission or other default behaviors
+
+            if (e.target.value) {
+                const barcode = e.target.value.trim();
+                try {
+                    const res = await inventoryAPI.findProduct(currentBranch?.id, { barcode });
+                    if (res.data) {
+                        addToCart(res.data);
+                        e.target.value = '';
+                        // Keep focus for next scan
+                        setTimeout(() => {
+                            if (barcodeInputRef.current) {
+                                barcodeInputRef.current.focus();
+                            }
+                        }, 10);
+                    }
+                } catch (error) {
+                    alert('Product not found for barcode: ' + barcode);
+                    e.target.value = ''; // Clear even on error so they can try again
+                    if (barcodeInputRef.current) barcodeInputRef.current.focus();
                 }
-            } catch (error) {
-                alert('Product not found for barcode: ' + barcode);
             }
         }
     };
@@ -160,20 +192,18 @@ export default function Billing() {
 
             const itemTotal = (stripPrice * item.quantity) + (tabletPrice * (item.loose || 0));
 
-            // Taxable Amount (assuming MRP includes GST? Usually MRP is inclusive, but here code treated it as base. 
-            // Looking at original code: itemTotal - discount... implies basic calc. 
-            // Let's stick to original flow: GST is added ON TOP of taxable amount derived from MRP?
-            // Wait, previous code: subtotal += itemTotal; totalGst += (taxable * gstRate).
-            // Let's assume MRP is base price here for simplicity or previous logic.
+            // Apply Global Discount to determine Taxable Amount
+            // If discount is 10%, we only tax 90% of the value
+            const itemDiscountAmount = (itemTotal * discount) / 100;
+            const taxableAmount = itemTotal - itemDiscountAmount;
 
-            const taxableAmount = itemTotal; // No item level discount anymore
             const gstAmount = (taxableAmount * item.gstRate) / 100;
 
             subtotal += itemTotal;
             totalGst += gstAmount;
         });
 
-        // Overall discount is percentage
+        // Overall discount is percentage of subtotal
         const discountAmount = (subtotal * discount) / 100;
         const grandTotal = subtotal - discountAmount + totalGst;
         return { subtotal, totalGst, grandTotal, discountAmount };
@@ -247,6 +277,7 @@ export default function Billing() {
                                 className="form-input"
                                 placeholder="Scan barcode or enter manually..."
                                 onKeyDown={handleBarcodeScan}
+                                autoFocus
                             />
                         </div>
 
@@ -292,7 +323,21 @@ export default function Billing() {
                                             >
                                                 <div className="product-info">
                                                     <span className="product-name">{product.name}</span>
-                                                    <span className="product-detail">{product.genericName} | Stock: {product.quantity}</span>
+                                                    <span className="product-detail">
+                                                        {product.genericName} | Stock: {product.quantity}
+                                                        {product.expiryDate && (
+                                                            <>
+                                                                <span style={{ margin: '0 8px', color: 'var(--border-color)' }}>|</span>
+                                                                <span style={{
+                                                                    color: getExpiryStatus(product.expiryDate).color,
+                                                                    fontWeight: 500
+                                                                }}>
+                                                                    Exp: {new Date(product.expiryDate).toLocaleDateString('en-IN')}
+                                                                    {/* ({getExpiryStatus(product.expiryDate).text}) */}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </span>
                                                 </div>
                                                 <span className="product-price">{formatCurrency(product.mrp)}</span>
                                             </div>
@@ -499,7 +544,7 @@ export default function Billing() {
                             <div className="invoice-print-area" id="invoice-print">
                                 {/* Invoice Header with Pharmacy Name */}
                                 <div className="invoice-header-print">
-                                    <h1 className="pharmacy-name">{invoice.branch?.name || 'Medistock'}</h1>
+                                    <h1 className="pharmacy-name">{invoice.branch?.name || 'IntellPharma'}</h1>
                                     <p className="pharmacy-address">{invoice.branch?.address || ''}</p>
                                     {invoice.branch?.phone && <p>Phone: {invoice.branch.phone}</p>}
                                     {invoice.branch?.gstNumber && <p>GSTIN: {invoice.branch.gstNumber}</p>}

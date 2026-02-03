@@ -103,7 +103,7 @@ export const aiAPI = {
     submitPrompt: (data) => api.post('/ai/prompt', data),
     parseBill: (data) => api.post('/ai/parse-bill', data),
     getHistory: (params) => api.get('/ai/prompt-history', { params }),
-    getSuggestions: () => api.get('/ai/suggested-prompts'),
+    getSuggestions: (params) => api.get('/ai/suggested-prompts', { params }),
     createSuggestion: (data) => api.post('/ai/suggested-prompts', data),
     updateSettings: (data) => api.put('/ai/settings', data)
 };
@@ -115,6 +115,7 @@ export const subscriptionAPI = {
     upgrade: (data) => api.post('/subscription/upgrade', data),
     addBranches: (count) => api.post('/subscription/add-branches', { count }),
     cancelRenewal: () => api.post('/subscription/cancel-renewal'),
+    reactivateRenewal: () => api.post('/subscription/reactivate-renewal'),
     getBillingHistory: () => api.get('/subscription/billing-history')
 };
 

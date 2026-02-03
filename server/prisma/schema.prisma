@@ -1,4 +1,4 @@
-// Medistock Prisma Schema
+// IntellPharma Prisma Schema
 
 generator client {
   provider = "prisma-client-js"
@@ -325,5 +325,14 @@ model BlogPostRead {
   post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
+}
+
+model InvoiceSequence {
+  id        String @id @default(uuid())
+  branchId  String
+  yearMonth String // e.g. "202401"
+  seq       Int    @default(0)
+
+  @@unique([branchId, yearMonth])
 }
 

@@ -301,6 +301,22 @@
     font-size: 0.8125rem;
 }
 
+/* High priority suggestions */
+.suggestion-item.priority-high {
+    border-left: 3px solid var(--warning, #f59e0b);
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.suggestion-item.priority-high:hover {
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.suggestions-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Chat Messages */
 .chat-messages {
     flex: 1;

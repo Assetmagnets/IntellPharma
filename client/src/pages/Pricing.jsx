@@ -307,7 +307,7 @@ export default function Pricing() {
                         Maximize Your ROI
                     </h2>
                     <p style={{ fontSize: '1.2rem', color: '#94a3b8', lineHeight: '1.7', marginBottom: '2rem' }}>
-                        Don't just spend on software; invest in growth. Our AI-driven insights help you identify high-margin products and reduce expiry wastage.
+                        Don't just spend on software, invest in growth. Our AI-driven insights help you identify high-margin products and reduce expiry wastage.
                     </p>
                     <ul style={{ listStyle: 'none', padding: 0 }}>
                         {[

@@ -30,9 +30,19 @@ export function AuthProvider({ children }) {
             if (response.ok) {
                 const data = await response.json();
                 setUser(data);
-                setBranches(data.branches || []);
-                if (data.branches?.length > 0 && !currentBranch) {
-                    setCurrentBranch(data.branches[0]);
+                const userBranches = data.branches || [];
+                setBranches(userBranches);
+
+                // Try to restore last used branch
+                const savedBranchId = localStorage.getItem('currentBranch');
+                const savedBranch = userBranches.find(b => b.id === savedBranchId);
+
+                if (savedBranch) {
+                    setCurrentBranch(savedBranch);
+                } else if (userBranches.length > 0 && !currentBranch) {
+                    setCurrentBranch(userBranches[0]);
+                    // Save default to storage so it persists
+                    localStorage.setItem('currentBranch', userBranches[0].id);
                 }
             } else {
                 logout();
@@ -61,9 +71,18 @@ export function AuthProvider({ children }) {
         localStorage.setItem('token', data.token);
         setToken(data.token);
         setUser(data.user);
-        setBranches(data.branches || []);
-        if (data.branches?.length > 0) {
-            setCurrentBranch(data.branches[0]);
+        const userBranches = data.branches || [];
+        setBranches(userBranches);
+
+        // Try to restore (safe if switching users on same machine due to .find check)
+        const savedBranchId = localStorage.getItem('currentBranch');
+        const savedBranch = userBranches.find(b => b.id === savedBranchId);
+
+        if (savedBranch) {
+            setCurrentBranch(savedBranch);
+        } else if (userBranches.length > 0) {
+            setCurrentBranch(userBranches[0]);
+            localStorage.setItem('currentBranch', userBranches[0].id);
         }
 
         return data;
@@ -113,6 +132,9 @@ export function AuthProvider({ children }) {
         setUser(null);
         setBranches([]);
         setCurrentBranch(null);
+
+        // Redirect to Landing Page
+        window.location.href = '/';
     };
 
     const switchBranch = (branch) => {

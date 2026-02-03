@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import StatsCard from '../components/StatsCard';
 import AIPromptBox from '../components/AIPromptBox';
+import AIAssistant from '../components/AIAssistant';
 import {
     Home,
     IndianRupee,
@@ -19,13 +20,16 @@ import {
 import '../styles/dashboard.css';
 
 export default function Dashboard() {
-    const { user, currentBranch, canAccessFinancials } = useAuth();
+    const { user, currentBranch, canAccessFinancials, branches } = useAuth();
     const [stats, setStats] = useState({
         todaySales: 0,
         invoiceCount: 0,
         lowStockCount: 0,
         expiringCount: 0,
-        criticalCount: 0
+        criticalCount: 0,
+        // Yesterday's data for comparison
+        yesterdaySales: 0,
+        yesterdayInvoices: 0
     });
     const [recentPrompts, setRecentPrompts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -40,15 +44,24 @@ export default function Dashboard() {
         try {
             setLoading(true);
 
+            // Today's date range
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
 
-            const [salesRes, lowStockRes, expiringRes, criticalRes, promptsRes] = await Promise.all([
+            // Yesterday's date range
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            const [salesRes, yesterdaySalesRes, lowStockRes, expiringRes, criticalRes, promptsRes] = await Promise.all([
+                // Today's sales (Start: Today 00:00, End: Today 23:59 via backend logic)
                 billingAPI.getSalesSummary(currentBranch.id, {
                     startDate: today.toISOString(),
-                    endDate: tomorrow.toISOString()
+                    endDate: today.toISOString()
+                }).catch(() => ({ data: { totalSales: 0, invoiceCount: 0 } })),
+                // Yesterday's sales (Start: Yesterday 00:00, End: Yesterday 23:59 via backend logic)
+                billingAPI.getSalesSummary(currentBranch.id, {
+                    startDate: yesterday.toISOString(),
+                    endDate: yesterday.toISOString()
                 }).catch(() => ({ data: { totalSales: 0, invoiceCount: 0 } })),
                 inventoryAPI.getLowStock(currentBranch.id).catch(() => ({ data: [] })),
                 inventoryAPI.getExpiring(currentBranch.id).catch(() => ({ data: [] })),
@@ -61,7 +74,9 @@ export default function Dashboard() {
                 invoiceCount: salesRes.data.invoiceCount || 0,
                 lowStockCount: lowStockRes.data.length || 0,
                 expiringCount: expiringRes.data.length || 0,
-                criticalCount: criticalRes.data.length || 0
+                criticalCount: criticalRes.data.length || 0,
+                yesterdaySales: yesterdaySalesRes.data.totalSales || 0,
+                yesterdayInvoices: yesterdaySalesRes.data.invoiceCount || 0
             });
 
             setRecentPrompts(promptsRes.data || []);
@@ -70,6 +85,32 @@ export default function Dashboard() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Calculate percentage change
+    const calculateChange = (current, previous) => {
+        if (previous === 0) {
+            return current > 0 ? { value: '+100% from yesterday', type: 'positive' } : { value: 'No change', type: 'neutral' };
+        }
+        const change = ((current - previous) / previous) * 100;
+        const rounded = Math.round(change);
+        if (rounded > 0) {
+            return { value: `+${rounded}% from yesterday`, type: 'positive' };
+        } else if (rounded < 0) {
+            return { value: `${rounded}% from yesterday`, type: 'negative' };
+        }
+        return { value: 'No change', type: 'neutral' };
+    };
+
+    // Calculate difference for invoice count
+    const calculateDiff = (current, previous) => {
+        const diff = current - previous;
+        if (diff > 0) {
+            return { value: `+${diff} from yesterday`, type: 'positive' };
+        } else if (diff < 0) {
+            return { value: `${diff} from yesterday`, type: 'negative' };
+        }
+        return { value: 'Same as yesterday', type: 'neutral' };
     };
 
     const formatCurrency = (amount) => {
@@ -118,8 +159,8 @@ export default function Dashboard() {
                                     iconBg="gradient-primary"
                                     label="Today's Sales"
                                     value={formatCurrency(stats.todaySales)}
-                                    change="+12%"
-                                    changeType="positive"
+                                    change={calculateChange(stats.todaySales, stats.yesterdaySales).value}
+                                    changeType={calculateChange(stats.todaySales, stats.yesterdaySales).type}
                                 />
                             )}
 
@@ -128,8 +169,8 @@ export default function Dashboard() {
                                 iconBg="gradient-accent"
                                 label="Invoices Today"
                                 value={stats.invoiceCount}
-                                change="+5"
-                                changeType="positive"
+                                change={calculateDiff(stats.invoiceCount, stats.yesterdayInvoices).value}
+                                changeType={calculateDiff(stats.invoiceCount, stats.yesterdayInvoices).type}
                             />
 
                             <StatsCard
@@ -205,6 +246,8 @@ export default function Dashboard() {
                     </>
                 )}
             </main>
+            {/* AI Assistant - Only visible on Dashboard */}
+            <AIAssistant isLocked={!branches?.some(b => b.subscription?.aiEnabled)} />
         </div>
     );
 }

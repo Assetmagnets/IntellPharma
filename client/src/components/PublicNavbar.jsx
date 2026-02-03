@@ -15,7 +15,7 @@ export default function PublicNavbar() {
         <nav className="landing-nav">
             <div className="nav-brand">
                 <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
-                    <img src="/logo.png" alt="Medistock" className="brand-logo" />
+                    <img src="/logo.png" alt="IntellPharma" className="brand-logo" />
                     <span className="brand-text">IntellPharma</span>
                 </Link>
             </div>

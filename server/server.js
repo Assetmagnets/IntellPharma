@@ -75,7 +75,6 @@ app.use('/api/v1/stripe', stripeRoutes);
 app.use('/api/v1/super-admin', require('./src/routes/superAdmin.routes'));
 app.use('/api/v1/blog', require('./src/routes/blog.routes'));
 
-
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err);

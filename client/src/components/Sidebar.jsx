@@ -19,7 +19,6 @@ import {
     Moon
 } from 'lucide-react';
 
-import AIAssistant from './AIAssistant';
 import '../styles/sidebar.css';
 
 export default function Sidebar() {
@@ -68,7 +67,7 @@ export default function Sidebar() {
             <aside className={`sidebar glass-sidebar ${isOpen ? 'open' : ''}`}>
                 {/* Logo */}
                 <div className="sidebar-logo">
-                    <img src="/logo.png" alt="Medistock" className="sidebar-logo-img" />
+                    <img src="/logo.png" alt="IntellPharma" className="sidebar-logo-img" />
                     <span className="logo-text">IntellPharma</span>
                 </div>
 
@@ -163,8 +162,6 @@ export default function Sidebar() {
                     </div>
                 </div>
             </aside>
-            {/* Unlock AI if ANY branch has a subscription */}
-            <AIAssistant isLocked={!branches.some(b => b.subscription?.aiEnabled)} />
         </>
     );
 }
