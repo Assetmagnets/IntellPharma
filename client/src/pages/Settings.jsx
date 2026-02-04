@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { authAPI, subscriptionAPI } from '../services/api';
+import { authAPI, subscriptionAPI, stripeAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import {
@@ -15,12 +15,16 @@ import {
     Eye,
     EyeOff,
     Trash2,
-    Send
+    Send,
+    Zap,
+    Crown,
+    Building2,
+    Loader2
 } from 'lucide-react';
 import '../styles/settings.css';
 
 export default function Settings() {
-    const { user, currentBranch } = useAuth();
+    const { user, currentBranch, branches } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('profile');
     const [profileData, setProfileData] = useState({
@@ -51,6 +55,11 @@ export default function Settings() {
     });
     const [saving, setSaving] = useState(false);
 
+    // Subscription state
+    const [currentSub, setCurrentSub] = useState(null);
+    const [billingHistory, setBillingHistory] = useState([]);
+    const [loadingSubscription, setLoadingSubscription] = useState(true);
+
     useEffect(() => {
         if (user) {
             setProfileData({
@@ -67,6 +76,70 @@ export default function Settings() {
             }
         }
     }, [user]);
+
+    // Load subscription data when billing tab is active
+    useEffect(() => {
+        if (activeTab === 'billing') {
+            loadSubscriptionData();
+        }
+    }, [activeTab]);
+
+    const loadSubscriptionData = async () => {
+        setLoadingSubscription(true);
+        try {
+            // Get current subscription
+            try {
+                const currentRes = await subscriptionAPI.getCurrent();
+                setCurrentSub(currentRes.data);
+            } catch (subErr) {
+                // If no subscription found (404), set a default BASIC subscription state
+                console.log('No subscription found, using default BASIC:', subErr);
+                setCurrentSub({
+                    plan: 'BASIC',
+                    planDetails: { name: 'Basic', price: 0 },
+                    maxBranches: 1,
+                    extraBranches: 0,
+                    aiEnabled: false,
+                    analyticsEnabled: false,
+                    autoRenew: false,
+                    usage: { branchCount: branches?.length || 1, maxBranches: 1, remaining: 0 }
+                });
+            }
+
+            // Try to get billing history
+            try {
+                const historyRes = await subscriptionAPI.getBillingHistory();
+                setBillingHistory(historyRes.data || []);
+            } catch (histErr) {
+                console.log('No billing history available:', histErr);
+            }
+        } catch (error) {
+            console.error('Load subscription error:', error);
+        } finally {
+            setLoadingSubscription(false);
+        }
+    };
+
+    const getPlanIcon = (planId) => {
+        switch (planId) {
+            case 'PRO':
+            case 'PREMIUM':
+                return <Crown size={24} />;
+            case 'ENTERPRISE':
+                return <Building2 size={24} />;
+            default:
+                return <Zap size={24} />;
+        }
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
 
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
@@ -578,34 +651,110 @@ export default function Settings() {
                                 <h2>Billing & Invoices</h2>
                                 <p className="section-desc">Manage your subscription billing</p>
 
-                                <div className="billing-card">
-                                    <div className="billing-header">
-                                        <span className="billing-icon">
-                                            <CreditCard size={24} />
-                                        </span>
-                                        <div>
-                                            <h3>Current Plan</h3>
-                                            <p>Basic - Free</p>
-                                        </div>
+                                {loadingSubscription ? (
+                                    <div className="loading-container" style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}>
+                                        <Loader2 className="spinner animate-spin" size={24} />
                                     </div>
-                                    <a href="/subscription" className="btn btn-secondary">
-                                        Manage Subscription
-                                    </a>
-                                </div>
+                                ) : (
+                                    <>
+                                        <div className="billing-card">
+                                            <div className="billing-header">
+                                                <span className="billing-icon">
+                                                    {getPlanIcon(currentSub?.plan)}
+                                                </span>
+                                                <div>
+                                                    <h3>Current Plan</h3>
+                                                    <p style={{ color: 'var(--primary)', fontWeight: '600' }}>
+                                                        {currentSub?.planDetails?.name || currentSub?.plan || 'Basic'}
+                                                        {currentSub?.planDetails?.price === 0 ? ' - Free' : currentSub?.planDetails?.price ? ` - ₹${currentSub.planDetails.price}/mo` : ''}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <a href="/subscription" className="btn btn-secondary">
+                                                Manage Subscription
+                                            </a>
+                                        </div>
 
-                                <div className="billing-info-section">
-                                    <h3>Payment Methods</h3>
-                                    <p className="text-muted">No payment methods added yet</p>
-                                    <button className="btn btn-secondary btn-sm">
-                                        <Plus size={16} />
-                                        Add Payment Method
-                                    </button>
-                                </div>
+                                        {/* Branch Usage */}
+                                        <div className="billing-info-section">
+                                            <h3>Branch Usage</h3>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '1rem',
+                                                marginTop: '0.5rem'
+                                            }}>
+                                                <div style={{
+                                                    flex: 1,
+                                                    background: 'var(--dark-border)',
+                                                    borderRadius: '8px',
+                                                    height: '8px',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    <div style={{
+                                                        width: `${((currentSub?.usage?.branchCount || branches?.length || 1) / (currentSub?.usage?.maxBranches || currentSub?.maxBranches || 1)) * 100}%`,
+                                                        height: '100%',
+                                                        background: 'var(--primary)',
+                                                        borderRadius: '8px',
+                                                        transition: 'width 0.3s ease'
+                                                    }} />
+                                                </div>
+                                                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                                    {currentSub?.usage?.branchCount || branches?.length || 1} / {currentSub?.usage?.maxBranches || currentSub?.maxBranches || 1} branches
+                                                </span>
+                                            </div>
+                                            {currentSub?.extraBranches > 0 && (
+                                                <p className="text-muted" style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                                                    Includes {currentSub.extraBranches} extra branch{currentSub.extraBranches > 1 ? 'es' : ''} (₹499/mo each)
+                                                </p>
+                                            )}
+                                        </div>
 
-                                <div className="billing-info-section">
-                                    <h3>Billing History</h3>
-                                    <p className="text-muted">No billing history available</p>
-                                </div>
+                                        {/* Payment Methods */}
+                                        <div className="billing-info-section">
+                                            <h3>Payment Methods</h3>
+                                            {currentSub?.stripeSubscriptionId ? (
+                                                <p className="text-muted">
+                                                    Payment managed via Stripe. Use "Manage Subscription" to update.
+                                                </p>
+                                            ) : (
+                                                <>
+                                                    <p className="text-muted">No payment methods added yet</p>
+                                                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/subscription')}>
+                                                        <Plus size={16} />
+                                                        Add Payment Method
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Billing History */}
+                                        <div className="billing-info-section">
+                                            <h3>Billing History</h3>
+                                            {billingHistory.length > 0 ? (
+                                                <div className="billing-history-list">
+                                                    {billingHistory.slice(0, 5).map((item, index) => (
+                                                        <div key={index} className="billing-history-item" style={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            padding: '0.75rem 0',
+                                                            borderBottom: '1px solid var(--dark-border)'
+                                                        }}>
+                                                            <div>
+                                                                <p style={{ fontWeight: '500' }}>{item.description || 'Subscription Payment'}</p>
+                                                                <p className="text-muted" style={{ fontSize: '0.85rem' }}>{formatDate(item.date)}</p>
+                                                            </div>
+                                                            <span style={{ fontWeight: '600', color: 'var(--success)' }}>₹{item.amount}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-muted">No billing history available</p>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>

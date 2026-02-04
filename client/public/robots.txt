@@ -1,10 +1,19 @@
+# IntellPharma Robots.txt
+# Allow all major search engine crawlers
+
 User-agent: *
 Allow: /
 
-# Private Routes (System & User Dashboard)
-Disallow: /login
-Disallow: /register
-Disallow: /forgot-password
+# Public Pages - Allow indexing
+Allow: /login
+Allow: /register
+Allow: /forgot-password
+Allow: /about
+Allow: /pricing
+Allow: /blog
+Allow: /blog/*
+
+# Private Dashboard Routes - Block from indexing
 Disallow: /dashboard
 Disallow: /billing
 Disallow: /inventory
@@ -18,9 +27,11 @@ Disallow: /payment-cancel
 
 # Super Admin
 Disallow: /super-admin
+Disallow: /super-admin/*
 
 # API & System
 Disallow: /api
+Disallow: /api/*
 
-# Sitemap
+# Sitemap location
 Sitemap: https://www.intellpharma.in/sitemap.xml

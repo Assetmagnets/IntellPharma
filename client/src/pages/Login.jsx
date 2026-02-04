@@ -1,9 +1,16 @@
 import LoginForm from '../components/auth/LoginForm';
+import SEO from '../components/SEO';
 import '../styles/auth.css';
 
 export default function Login() {
     return (
         <div className="auth-page gradient-mesh">
+            <SEO
+                title="Login - IntellPharma Pharmacy Management"
+                description="Login to IntellPharma - India's #1 Smart Pharmacy Management System. Access your pharmacy dashboard, manage inventory, billing, and more."
+                keywords="intellpharma login, pharmacy software login, medical store software login, intellpharma sign in"
+                canonicalUrl="/login"
+            />
             <div className="auth-container animate-slideUp">
                 <div className="auth-header">
                     <div className="auth-logo">
@@ -21,6 +28,3 @@ export default function Login() {
         </div>
     );
 }
-
-
-

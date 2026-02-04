@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
+import SEO from '../components/SEO';
 import {
     Pill,
     AlertTriangle,
@@ -14,6 +15,7 @@ import {
     EyeOff
 } from 'lucide-react';
 import '../styles/auth.css';
+
 
 export default function ForgotPassword() {
     const navigate = useNavigate();
@@ -111,6 +113,12 @@ export default function ForgotPassword() {
 
     return (
         <div className="auth-page gradient-mesh">
+            <SEO
+                title="Forgot Password - Reset Your IntellPharma Account"
+                description="Reset your IntellPharma password. Recover access to your pharmacy management account with email OTP verification."
+                keywords="intellpharma forgot password, reset pharmacy password, intellpharma password recovery"
+                canonicalUrl="/forgot-password"
+            />
             <div className="auth-container animate-slideUp">
                 <div className="auth-header">
                     <div className="auth-logo">

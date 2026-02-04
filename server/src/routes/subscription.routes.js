@@ -386,17 +386,45 @@ router.post('/reactivate-renewal', authenticate, authorize('OWNER'), async (req,
     }
 });
 
-// Get billing history (placeholder - integrate with payment provider)
+// Get billing history from Stripe
 router.get('/billing-history', authenticate, authorize('OWNER'), async (req, res) => {
     try {
-        // In production, integrate with Razorpay/Stripe to fetch real invoices
-        res.json({
-            invoices: [],
-            message: 'Billing history integration pending with payment provider.'
+        // Get user's Stripe customer ID
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { stripeCustomerId: true }
         });
+
+        if (!user?.stripeCustomerId) {
+            return res.json([]);
+        }
+
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+        // Fetch invoices from Stripe
+        const invoices = await stripe.invoices.list({
+            customer: user.stripeCustomerId,
+            limit: 10
+        });
+
+        // Transform to simpler format
+        const billingHistory = invoices.data.map(invoice => ({
+            id: invoice.id,
+            date: invoice.created ? new Date(invoice.created * 1000).toISOString() : null,
+            amount: invoice.amount_paid / 100, // Convert from paise to rupees
+            description: invoice.lines.data.length > 0
+                ? invoice.lines.data.map(line => line.description).join(', ')
+                : 'Subscription Payment',
+            status: invoice.status,
+            invoiceUrl: invoice.hosted_invoice_url,
+            pdfUrl: invoice.invoice_pdf
+        }));
+
+        res.json(billingHistory);
     } catch (error) {
         console.error('Billing history error:', error);
-        res.status(500).json({ error: 'Failed to fetch billing history.' });
+        // Return empty array on error instead of 500
+        res.json([]);
     }
 });
 
