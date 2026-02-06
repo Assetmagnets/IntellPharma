@@ -1,21 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { billingAPI, inventoryAPI, aiAPI } from '../services/api';
+import { billingAPI, inventoryAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import StatsCard from '../components/StatsCard';
-import AIPromptBox from '../components/AIPromptBox';
 import AIAssistant from '../components/AIAssistant';
 import {
     Home,
     IndianRupee,
     Package,
     Clock,
-    Sparkles,
     PackagePlus,
     AlertTriangle,
     BarChart3,
-    ReceiptIndianRupeeIcon
+    ReceiptIndianRupeeIcon,
+    TrendingUp
 } from 'lucide-react';
 import '../styles/dashboard.css';
 
@@ -31,7 +30,6 @@ export default function Dashboard() {
         yesterdaySales: 0,
         yesterdayInvoices: 0
     });
-    const [recentPrompts, setRecentPrompts] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -52,7 +50,7 @@ export default function Dashboard() {
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
 
-            const [salesRes, yesterdaySalesRes, lowStockRes, expiringRes, criticalRes, promptsRes] = await Promise.all([
+            const [salesRes, yesterdaySalesRes, lowStockRes, expiringRes, criticalRes] = await Promise.all([
                 // Today's sales (Start: Today 00:00, End: Today 23:59 via backend logic)
                 billingAPI.getSalesSummary(currentBranch.id, {
                     startDate: today.toISOString(),
@@ -65,8 +63,7 @@ export default function Dashboard() {
                 }).catch(() => ({ data: { totalSales: 0, invoiceCount: 0 } })),
                 inventoryAPI.getLowStock(currentBranch.id).catch(() => ({ data: [] })),
                 inventoryAPI.getExpiring(currentBranch.id).catch(() => ({ data: [] })),
-                inventoryAPI.getCritical(currentBranch.id).catch(() => ({ data: [] })),
-                aiAPI.getHistory({ limit: 5 }).catch(() => ({ data: [] }))
+                inventoryAPI.getCritical(currentBranch.id).catch(() => ({ data: [] }))
             ]);
 
             setStats({
@@ -78,8 +75,6 @@ export default function Dashboard() {
                 yesterdaySales: yesterdaySalesRes.data.totalSales || 0,
                 yesterdayInvoices: yesterdaySalesRes.data.invoiceCount || 0
             });
-
-            setRecentPrompts(promptsRes.data || []);
         } catch (error) {
             console.error('Dashboard load error:', error);
         } finally {
@@ -192,57 +187,46 @@ export default function Dashboard() {
                             />
                         </div>
 
-                        {/* AI Prompt Section */}
+                        {/* Quick Actions */}
                         <section className="dashboard-section">
                             <div className="section-header">
                                 <h2>
-                                    <Sparkles className="section-icon" size={24} />
-                                    AI Assistant
+                                    <TrendingUp className="section-icon" size={22} />
+                                    Quick Actions
                                 </h2>
-                                <p>Ask questions about your pharmacy data</p>
+                                <p>Frequently used operations for your pharmacy</p>
                             </div>
-                            <AIPromptBox branchId={currentBranch?.id} />
-                        </section>
-
-                        {/* Quick Actions */}
-                        <section className="dashboard-section">
-                            <h2>Quick Actions</h2>
                             <div className="quick-actions">
-                                <button className="action-card glass-card" onClick={() => window.location.href = '/billing'}>
-                                    <ReceiptIndianRupeeIcon className="action-icon" size={32} color='green' />
+                                <button className="action-card" onClick={() => window.location.href = '/billing'}>
+                                    <div className="action-icon-wrapper gradient-success">
+                                        <ReceiptIndianRupeeIcon size={28} />
+                                    </div>
                                     <span className="action-label">New Invoice</span>
+                                    <span className="action-desc">Create a new sale</span>
                                 </button>
-                                <button className="action-card glass-card" onClick={() => window.location.href = '/inventory'}>
-                                    <PackagePlus className="action-icon" size={32} />
+                                <button className="action-card" onClick={() => window.location.href = '/inventory'}>
+                                    <div className="action-icon-wrapper gradient-primary">
+                                        <PackagePlus size={28} />
+                                    </div>
                                     <span className="action-label">Add Product</span>
+                                    <span className="action-desc">Add to inventory</span>
                                 </button>
-                                <button className="action-card glass-card" onClick={() => window.location.href = '/inventory?filter=low-stock'}>
-                                    <AlertTriangle className="action-icon" size={32} color='red' />
+                                <button className="action-card" onClick={() => window.location.href = '/inventory?filter=low-stock'}>
+                                    <div className="action-icon-wrapper gradient-warning">
+                                        <AlertTriangle size={28} />
+                                    </div>
                                     <span className="action-label">Low Stock</span>
+                                    <span className="action-desc">Review stock alerts</span>
                                 </button>
-                                <button className="action-card glass-card" onClick={() => window.location.href = '/reports'}>
-                                    <BarChart3 className="action-icon" size={32} />
+                                <button className="action-card" onClick={() => window.location.href = '/reports'}>
+                                    <div className="action-icon-wrapper gradient-accent">
+                                        <BarChart3 size={28} />
+                                    </div>
                                     <span className="action-label">Reports</span>
+                                    <span className="action-desc">View analytics</span>
                                 </button>
                             </div>
                         </section>
-
-                        {/* Recent Prompts */}
-                        {recentPrompts.length > 0 && (
-                            <section className="dashboard-section">
-                                <h2>Recent AI Queries</h2>
-                                <div className="recent-prompts">
-                                    {recentPrompts.map((item, index) => (
-                                        <div key={item.id || index} className="prompt-item glass-panel">
-                                            <div className="prompt-text">{item.prompt}</div>
-                                            <div className="prompt-meta">
-                                                {new Date(item.createdAt).toLocaleString()}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
                     </>
                 )}
             </main>

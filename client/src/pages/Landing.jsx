@@ -1,8 +1,7 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
-import { useAuthModal } from '../context/AuthModalContext';
 import {
     Sparkles,
     Rocket,
@@ -22,7 +21,11 @@ import {
 import '../styles/landing.css';
 
 export default function Landing() {
-    const { openRegister } = useAuthModal();
+    const navigate = useNavigate();
+
+    const handleGetStarted = () => {
+        navigate('/auth?mode=register');
+    };
 
     return (
         <div className="landing-page">
@@ -53,7 +56,7 @@ export default function Landing() {
                         IntellPharma is the leading <strong>Smart Pharmacy Management System</strong> & Medical Store Software. Automate inventory, GST billing, and expiry tracking with our AI-powered digital solution.
                     </p>
                     <div className="hero-actions">
-                        <button onClick={openRegister} className="btn btn-primary btn-lg">
+                        <button onClick={handleGetStarted} className="btn btn-primary btn-lg">
                             Start Free Trial
                         </button>
                         <Link to="/pricing" className="btn btn-secondary btn-lg">
@@ -242,10 +245,10 @@ export default function Landing() {
             {/* CTA Section */}
             <section className="cta-section">
                 <div className="cta-content">
-                   
+
                     <h2>Ready to Transform Your Pharmacy?</h2>
                     <p>Join 50+ pharmacies already growing with IntellPharma</p>
-                    <button onClick={openRegister} className="btn btn-primary btn-lg">
+                    <button onClick={handleGetStarted} className="btn btn-primary btn-lg">
                         <Rocket size={20} />
                         Start Your Free Trial
                     </button>

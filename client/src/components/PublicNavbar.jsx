@@ -1,15 +1,24 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useAuthModal } from '../context/AuthModalContext';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import '../styles/landing.css';
 
 export default function PublicNavbar() {
     const { isAuthenticated } = useAuth();
-    const { openLogin, openRegister } = useAuthModal();
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleLogin = () => {
+        navigate('/auth');
+        setIsOpen(false);
+    };
+
+    const handleRegister = () => {
+        navigate('/auth?mode=register');
+        setIsOpen(false);
+    };
 
     return (
         <nav className="landing-nav">
@@ -65,20 +74,14 @@ export default function PublicNavbar() {
                     ) : (
                         <>
                             <button
-                                onClick={() => {
-                                    openLogin();
-                                    setIsOpen(false);
-                                }}
+                                onClick={handleLogin}
                                 className="nav-link"
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
                             >
                                 Login
                             </button>
                             <button
-                                onClick={() => {
-                                    openRegister();
-                                    setIsOpen(false);
-                                }}
+                                onClick={handleRegister}
                                 className="nav-link"
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
                             >
@@ -96,10 +99,10 @@ export default function PublicNavbar() {
                     </Link>
                 ) : (
                     <>
-                        <button onClick={openLogin} className="btn btn-ghost">
+                        <button onClick={handleLogin} className="btn btn-ghost">
                             Login
                         </button>
-                        <button onClick={openRegister} className="btn btn-primary">
+                        <button onClick={handleRegister} className="btn btn-primary">
                             Get Started
                         </button>
                     </>

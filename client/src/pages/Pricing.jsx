@@ -154,7 +154,7 @@ export default function Pricing() {
                             <li style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', color: 'var(--dark-text-secondary)' }}><Check size={18} color="var(--success)" /> Inventory management</li>
                         </ul>
 
-                        <Link to="/register?plan=BASIC" className="btn btn-success" style={{
+                        <Link to="/auth?mode=register" className="btn btn-success" style={{
                             justifyContent: 'center',
                             padding: '1rem',
                             marginTop: 'auto',
@@ -208,7 +208,7 @@ export default function Pricing() {
                             <li style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', color: '#e2e8f0', fontSize: '1.05rem', fontWeight: '500' }}><Check size={20} color="#00e6ac" /> GST reports</li>
                         </ul>
 
-                        <Link to="/register?plan=PRO" className="btn btn-primary" style={{
+                        <Link to="/auth?mode=register" className="btn btn-primary" style={{
                             justifyContent: 'center', padding: '1rem', marginTop: 'auto', borderRadius: '12px',
                             background: 'linear-gradient(135deg, #0066e6 0%, #0047ab 100%)',
                             color: 'white', textDecoration: 'none', display: 'flex', fontWeight: '600',
@@ -239,7 +239,7 @@ export default function Pricing() {
                             <li style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', color: 'var(--dark-text-secondary)' }}><Check size={18} color="#F59E0B" /> API access</li>
                         </ul>
 
-                        <Link to="/register?plan=PREMIUM" className="btn btn-primary" style={{
+                        <Link to="/auth?mode=register" className="btn btn-primary" style={{
                             justifyContent: 'center', padding: '1rem', marginTop: 'auto', borderRadius: '8px',
                             background: 'linear-gradient(135deg, #F59E0B 0%, #d97706 100%)', color: 'white', textDecoration: 'none', display: 'flex', fontWeight: '600'
                         }}>
@@ -451,7 +451,7 @@ export default function Pricing() {
                         Join 5,000+ pharmacies growing with IntellPharma. No credit card required.
                     </p>
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <Link to="/register" style={{
+                        <Link to="/auth?mode=register" style={{
                             padding: '1rem 2.5rem',
                             background: 'white',
                             color: 'var(--primary-600)',

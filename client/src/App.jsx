@@ -10,6 +10,7 @@ import AuthModal from './components/auth/AuthModal';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import AuthPage from './pages/AuthPage';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import Billing from './pages/Billing';
@@ -44,6 +45,7 @@ function App() {
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Landing />} />
+                <Route path="/auth" element={<AuthPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />

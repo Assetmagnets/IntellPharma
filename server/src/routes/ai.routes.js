@@ -62,6 +62,80 @@ router.get('/models', authenticate, async (req, res) => {
         });
     }
 });
+// ============================================
+// FUZZY MATCHING UTILITIES FOR SMART INTENT DETECTION
+// ============================================
+
+// Levenshtein distance algorithm for string similarity
+const levenshteinDistance = (str1, str2) => {
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+    const m = s1.length;
+    const n = s2.length;
+
+    // Create distance matrix
+    const dp = Array.from({ length: m + 1 }, (_, i) =>
+        Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0)
+    );
+
+    // Fill the matrix
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (s1[i - 1] === s2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1];
+            } else {
+                dp[i][j] = 1 + Math.min(
+                    dp[i - 1][j],     // deletion
+                    dp[i][j - 1],     // insertion
+                    dp[i - 1][j - 1]  // substitution
+                );
+            }
+        }
+    }
+    return dp[m][n];
+};
+
+// Fuzzy match - checks if any word in text is similar to keyword
+const fuzzyMatch = (text, keyword, maxDistance = 2) => {
+    // First check exact/partial match (fast path)
+    if (text.includes(keyword.toLowerCase())) return true;
+
+    // For multi-word keywords, check if all words are present (fuzzy)
+    const keywordWords = keyword.toLowerCase().split(/\s+/);
+    if (keywordWords.length > 1) {
+        return keywordWords.every(kw => fuzzyMatch(text, kw, maxDistance));
+    }
+
+    // Split text into words and check each
+    const words = text.split(/\s+/);
+    for (const word of words) {
+        // Skip very short words
+        if (word.length < 3) continue;
+
+        // Calculate similarity
+        const distance = levenshteinDistance(word, keyword);
+
+        // Dynamic threshold based on word length
+        // Short words (<=4 chars): max 1 error
+        // Medium words (5-7 chars): max 2 errors  
+        // Long words (8+ chars): max 3 errors
+        let threshold;
+        if (keyword.length <= 4) threshold = 1;
+        else if (keyword.length <= 7) threshold = 2;
+        else threshold = 3;
+
+        if (distance <= Math.min(threshold, maxDistance)) {
+            return true;
+        }
+    }
+    return false;
+};
+
+// Check if text contains any keyword from array (with fuzzy matching)
+const containsAnyKeyword = (text, keywords) => {
+    return keywords.some(keyword => fuzzyMatch(text, keyword));
+};
+
 // Process AI prompt with Gemini - Professional & Comprehensive
 router.post('/prompt', authenticate, requireFeature('ai'), async (req, res) => {
     try {
@@ -72,27 +146,28 @@ router.post('/prompt', authenticate, requireFeature('ai'), async (req, res) => {
         // Initialize Gemini
         const { GoogleGenerativeAI } = require("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        // Smart keyword detection
+        // Enhanced keyword detection with synonyms and common variations
         const keywords = {
-            inventory: ['stock', 'inventory', 'product', 'medicine', 'item', 'quantity', 'available'],
-            lowStock: ['low stock', 'reorder', 'stock alert', 'running out', 'shortage', 'less', 'below'],
-            expiry: ['expir', 'expire', 'expiry', 'expired', 'shelf life', 'date'],
-            sales: ['sale', 'revenue', 'income', 'earning', 'sold', 'billing', 'invoice'],
-            topSelling: ['top sell', 'best sell', 'popular', 'most sold', 'trending', 'highest'],
-            today: ['today', 'daily', 'this day'],
-            weekly: ['week', 'weekly', 'last 7 days'],
-            monthly: ['month', 'monthly', 'last 30 days'],
-            customer: ['customer', 'client', 'buyer', 'patient'],
-            profit: ['profit', 'margin', 'earning', 'gain'],
-            search: ['find', 'search', 'look for', 'where is', 'do we have', 'check']
+            inventory: ['stock', 'inventory', 'product', 'medicine', 'item', 'quantity', 'available', 'goods', 'drug', 'tablet', 'capsule', 'syrup'],
+            lowStock: ['low stock', 'reorder', 'stock alert', 'running out', 'shortage', 'less', 'below', 'out of stock', 'empty', 'need more', 'running low', 'finish', 'finished'],
+            expiry: ['expir', 'expire', 'expiry', 'expired', 'expiring', 'expiration', 'shelf life', 'date', 'validity', 'valid till', 'best before'],
+            sales: ['sale', 'sales', 'revenue', 'income', 'earning', 'sold', 'billing', 'invoice', 'billed', 'transaction', 'order', 'receipt'],
+            topSelling: ['top sell', 'best sell', 'popular', 'most sold', 'trending', 'highest', 'fast moving', 'best seller', 'top product', 'hot selling', 'demand'],
+            today: ['today', 'daily', 'this day', 'todays', 'current day'],
+            weekly: ['week', 'weekly', 'last 7 days', 'this week', 'past week', '7 days'],
+            monthly: ['month', 'monthly', 'last 30 days', 'this month', 'past month', '30 days'],
+            customer: ['customer', 'client', 'buyer', 'patient', 'purchaser', 'consumer'],
+            profit: ['profit', 'margin', 'earning', 'gain', 'markup', 'net income', 'gross'],
+            search: ['find', 'search', 'look for', 'where is', 'do we have', 'check', 'locate', 'show me', 'get', 'fetch', 'display']
         };
 
+        // Smart intent detection with fuzzy matching
         const detectIntent = (text) => {
             const detected = {};
             for (const [key, words] of Object.entries(keywords)) {
-                detected[key] = words.some(word => text.includes(word));
+                detected[key] = containsAnyKeyword(text, words);
             }
             return detected;
         };
