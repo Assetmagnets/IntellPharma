@@ -225,70 +225,88 @@ export default function Branches() {
                             <form onSubmit={handleSubmit} className="branch-form">
                                 <div className="form-group">
                                     <label className="form-label">Branch Name *</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="e.g., Main Store, Downtown Branch"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
+                                    <div className="input-with-icon">
+                                        <Building2 size={18} className="input-icon" />
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="e.g., Main Store, Downtown Branch"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="form-group">
                                     <label className="form-label">Address</label>
-                                    <textarea
-                                        className="form-input"
-                                        rows="2"
-                                        placeholder="Full address of the branch"
-                                        value={formData.address}
-                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                    />
+                                    <div className="input-with-icon">
+                                        <MapPin size={18} className="input-icon" style={{ top: '1rem', transform: 'none' }} />
+                                        <textarea
+                                            className="form-input"
+                                            rows="2"
+                                            placeholder="Full address of the branch"
+                                            value={formData.address}
+                                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="form-row">
                                     <div className="form-group">
                                         <label className="form-label">Phone</label>
-                                        <input
-                                            type="tel"
-                                            className="form-input"
-                                            placeholder="+91 XXXXXXXXXX"
-                                            value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        />
+                                        <div className="input-with-icon">
+                                            <Phone size={18} className="input-icon" />
+                                            <input
+                                                type="tel"
+                                                className="form-input"
+                                                placeholder="+91 XXXXXXXXXX"
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Email</label>
-                                        <input
-                                            type="email"
-                                            className="form-input"
-                                            placeholder="branch@pharmacy.com"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        />
+                                        <div className="input-with-icon">
+                                            <Mail size={18} className="input-icon" />
+                                            <input
+                                                type="email"
+                                                className="form-input"
+                                                placeholder="branch@pharmacy.com"
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="form-row">
                                     <div className="form-group">
                                         <label className="form-label">GST Number</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            placeholder="22XXXXX1234X1Z5"
-                                            value={formData.gstNumber}
-                                            onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
-                                        />
+                                        <div className="input-with-icon">
+                                            <Receipt size={18} className="input-icon" />
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                placeholder="22XXXXX1234X1Z5"
+                                                value={formData.gstNumber}
+                                                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Drug License Number</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            placeholder="DL-XX-XXXXXX"
-                                            value={formData.licenseNumber}
-                                            onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-                                        />
+                                        <div className="input-with-icon">
+                                            <Store size={18} className="input-icon" />
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                placeholder="DL-XX-XXXXXX"
+                                                value={formData.licenseNumber}
+                                                onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 

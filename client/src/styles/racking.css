@@ -1,0 +1,888 @@
+/* =====================================================
+   SMART RACKING PAGE - REALISTIC PHARMACY SHELF UI
+   ===================================================== */
+
+/* Toolbar: search + filter tabs + add button */
+.racking-toolbar {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: 14px;
+}
+
+@media (max-width: 768px) {
+    .racking-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.racking-toolbar .search-box {
+    flex: 1;
+    position: relative;
+}
+
+.racking-toolbar .search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--dark-text-secondary);
+}
+
+.racking-toolbar .form-input {
+    padding-left: 2.75rem;
+}
+
+/* =====================================================
+   RACK MAP — Container for all shelf units
+   ===================================================== */
+
+.rack-map-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* =====================================================
+   RACK SHELF UNIT — looks like a real pharmacy rack
+   ===================================================== */
+
+.rack-shelf-unit {
+    background: var(--dark-surface);
+    border: 2px solid #8B7355;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.08),
+        inset 0 0 0 1px rgba(139, 115, 85, 0.15);
+    transition: all 0.3s ease;
+}
+
+.rack-shelf-unit:hover {
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        inset 0 0 0 1px rgba(139, 115, 85, 0.25);
+}
+
+.rack-shelf-unit.rack-highlight {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(0, 102, 230, 0.25);
+    animation: rackPulse 1.5s ease-in-out 2;
+}
+
+@keyframes rackPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 3px rgba(0, 102, 230, 0.15);
+    }
+
+    50% {
+        box-shadow: 0 0 0 6px rgba(0, 102, 230, 0.3);
+    }
+}
+
+/* --- Shelf Unit Header (rack name + type + actions) --- */
+.rack-shelf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1.25rem;
+    background: linear-gradient(135deg, #6B5B45 0%, #8B7355 50%, #6B5B45 100%);
+    color: #fff;
+}
+
+.rack-shelf-header-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.rack-shelf-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rack-shelf-header .rack-type-badge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rack-type-badge.GENERAL {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.rack-type-badge.REFRIGERATED {
+    background: rgba(6, 182, 212, 0.3);
+    color: #a5f3fc;
+}
+
+.rack-type-badge.CONTROLLED {
+    background: rgba(168, 85, 247, 0.3);
+    color: #d8b4fe;
+}
+
+.rack-type-badge.HAZARDOUS {
+    background: rgba(251, 146, 60, 0.3);
+    color: #fed7aa;
+}
+
+.rack-type-badge.BULK {
+    background: rgba(34, 197, 94, 0.3);
+    color: #bbf7d0;
+}
+
+.rack-shelf-desc {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 0.15rem;
+}
+
+.rack-shelf-header-actions {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.rack-shelf-header-actions button {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    padding: 0.35rem;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rack-shelf-header-actions button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* --- Stats bar below header --- */
+.rack-shelf-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 1.25rem;
+    background: rgba(139, 115, 85, 0.08);
+    border-bottom: 1px solid rgba(139, 115, 85, 0.2);
+}
+
+.rack-stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 5px;
+}
+
+.rack-stat-chip.items {
+    background: var(--primary-100);
+    color: var(--primary-600);
+}
+
+.rack-stat-chip.expiry {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+.rack-stat-chip.low-stock {
+    background: var(--error-light);
+    color: var(--error);
+}
+
+.rack-util-mini {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dark-text-secondary);
+}
+
+.rack-util-mini-bar {
+    width: 80px;
+    height: 5px;
+    background: var(--dark-surface-2);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.rack-util-mini-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.5s ease;
+}
+
+.rack-util-mini-fill.low {
+    background: var(--success);
+}
+
+.rack-util-mini-fill.medium {
+    background: var(--warning);
+}
+
+.rack-util-mini-fill.high {
+    background: var(--error);
+}
+
+/* =====================================================
+   SHELF GRID — column headers + shelf rows + cells
+   ===================================================== */
+
+.shelf-grid {
+    display: grid;
+    padding: 0;
+}
+
+/* Column header row (A, B, C, D...) */
+.shelf-column-headers {
+    display: grid;
+    padding: 0 0 0 54px;
+    background: rgba(139, 115, 85, 0.06);
+    border-bottom: 2px solid #8B7355;
+}
+
+.shelf-column-header {
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #8B7355;
+    padding: 0.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-left: 1px solid rgba(139, 115, 85, 0.15);
+}
+
+.shelf-column-header:first-child {
+    border-left: none;
+}
+
+/* A single shelf row (row label + cells) */
+.shelf-grid-row {
+    display: grid;
+    border-bottom: 3px solid #8B7355;
+    min-height: 80px;
+    transition: background 0.2s ease;
+}
+
+.shelf-grid-row:last-child {
+    border-bottom: none;
+}
+
+.shelf-grid-row:hover {
+    background: rgba(139, 115, 85, 0.03);
+}
+
+/* Row label (1, 2, 3...) */
+.shelf-row-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #8B7355;
+    background: rgba(139, 115, 85, 0.06);
+    border-right: 2px solid #8B7355;
+    min-width: 54px;
+    padding: 0.5rem;
+}
+
+/* Individual cell on the shelf */
+.shelf-cell {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    padding: 0.5rem;
+    border-left: 1px solid rgba(139, 115, 85, 0.15);
+    min-height: 72px;
+}
+
+.shelf-cell:first-of-type {
+    border-left: none;
+}
+
+/* Empty shelf slot */
+.shelf-cell-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    border: 1.5px dashed rgba(139, 115, 85, 0.2);
+    border-radius: 8px;
+    color: rgba(139, 115, 85, 0.3);
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.shelf-cell-empty:hover {
+    border-color: rgba(139, 115, 85, 0.35);
+    background: rgba(139, 115, 85, 0.03);
+}
+
+/* Medicine box on a shelf */
+.medicine-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid;
+    cursor: default;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.medicine-box:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.medicine-box.status-ok {
+    background: linear-gradient(135deg, rgba(0, 102, 230, 0.06), rgba(0, 102, 230, 0.12));
+    border-color: rgba(0, 102, 230, 0.25);
+}
+
+.medicine-box.status-low-stock {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.06), rgba(239, 68, 68, 0.12));
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.medicine-box.status-expiring {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(245, 158, 11, 0.12));
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.medicine-box-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.medicine-box-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+}
+
+.medicine-box-qty {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--dark-text-secondary);
+}
+
+.medicine-box-bin {
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: rgba(139, 115, 85, 0.12);
+    color: #8B7355;
+}
+
+/* =====================================================
+   PRODUCT TOOLTIP (hover on medicine boxes)
+   ===================================================== */
+
+.product-tooltip {
+    position: fixed;
+    z-index: 9999;
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+    min-width: 180px;
+    max-width: 260px;
+}
+
+.product-tooltip h4 {
+    font-size: 0.8125rem;
+    color: var(--dark-text);
+    margin: 0 0 0.35rem;
+    font-weight: 600;
+}
+
+.product-tooltip p {
+    font-size: 0.75rem;
+    color: var(--dark-text-secondary);
+    margin: 0.1rem 0;
+}
+
+.product-tooltip .tooltip-bin {
+    display: inline-block;
+    margin-top: 0.3rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: var(--primary-100);
+    color: var(--primary-600);
+}
+
+/* =====================================================
+   SEARCH RESULTS
+   ===================================================== */
+
+.search-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: 14px;
+    margin-bottom: 0.5rem;
+    transition: border-color 0.2s ease;
+}
+
+.search-result-item:hover {
+    border-color: var(--primary-500);
+}
+
+.search-result-info h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    margin: 0 0 0.2rem;
+}
+
+.search-result-info p {
+    font-size: 0.8125rem;
+    color: var(--dark-text-secondary);
+    margin: 0;
+}
+
+.search-result-locations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.search-result-location {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary-500);
+    background: var(--primary-100);
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.search-result-location:hover {
+    background: var(--primary-200);
+}
+
+.search-result-location.not-assigned {
+    color: var(--dark-text-secondary);
+    background: var(--dark-surface-2);
+    cursor: default;
+}
+
+/* =====================================================
+   ALERTS LIST
+   ===================================================== */
+
+.racking-alert-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.25rem;
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: 14px;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid transparent;
+}
+
+.racking-alert-item.critical {
+    border-left-color: var(--error);
+}
+
+.racking-alert-item.warning {
+    border-left-color: var(--warning);
+}
+
+.racking-alert-item.info {
+    border-left-color: var(--primary-500);
+}
+
+.racking-alert-icon {
+    flex-shrink: 0;
+}
+
+.racking-alert-item.critical .racking-alert-icon {
+    color: var(--error);
+}
+
+.racking-alert-item.warning .racking-alert-icon {
+    color: var(--warning);
+}
+
+.racking-alert-item.info .racking-alert-icon {
+    color: var(--primary-500);
+}
+
+.racking-alert-message {
+    font-size: 0.875rem;
+    color: var(--dark-text);
+}
+
+/* =====================================================
+   RACK MODAL (Create / Edit)
+   ===================================================== */
+
+.rack-modal {
+    max-width: 560px;
+    width: 95%;
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+    border-radius: 20px;
+}
+
+.rack-modal-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.rack-modal-body .form-hint {
+    font-size: 0.75rem;
+    color: var(--dark-text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* =====================================================
+   UTILITIES
+   ===================================================== */
+
+.animate-fadeIn {
+    animation: rackFadeIn 0.25s ease;
+}
+
+@keyframes rackFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+
+    .shelf-column-headers,
+    .shelf-grid-row {
+        min-width: 500px;
+    }
+
+    .table-container.glass-panel {
+        overflow-x: auto;
+    }
+}
+
+/* ==============================
+   INTRO / WELCOME SCREEN
+   ============================== */
+
+.racking-intro {
+    text-align: center;
+    padding: 3rem 2rem;
+    max-width: 700px;
+    margin: 2rem auto;
+    animation: fadeInUp 0.5s ease;
+}
+
+.racking-intro-icon {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    color: white;
+}
+
+.racking-intro h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--dark-text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.racking-intro-subtitle {
+    font-size: 1.05rem;
+    color: var(--dark-text-secondary);
+    margin-bottom: 2rem;
+}
+
+.racking-intro-features {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: left;
+    margin-bottom: 2rem;
+}
+
+.racking-intro-feature {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--dark-border);
+    border-radius: 12px;
+}
+
+.racking-intro-feature .feature-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 10px;
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--primary-400);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.racking-intro-feature strong {
+    color: var(--dark-text-primary);
+    font-size: 0.95rem;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.racking-intro-feature p {
+    color: var(--dark-text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* How it works steps */
+.racking-intro-how {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--dark-border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.racking-intro-how h3 {
+    font-size: 1rem;
+    color: var(--dark-text-primary);
+    margin-bottom: 1rem;
+}
+
+.racking-intro-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.intro-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--dark-text-secondary);
+}
+
+.step-num {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 50%;
+    background: var(--primary-500);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.step-arrow {
+    color: var(--dark-text-muted);
+}
+
+/* Enable button */
+.racking-enable-btn {
+    font-size: 1.1rem !important;
+    padding: 0.85rem 2.5rem !important;
+    border-radius: 14px !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1rem;
+}
+
+.racking-intro-note {
+    font-size: 0.8rem;
+    color: var(--dark-text-muted);
+    font-style: italic;
+}
+
+/* ==============================
+   PRINT-ONLY LABELS — hidden on screen
+   ============================== */
+
+.print-only-labels {
+    display: none;
+}
+
+/* ==============================
+   PRINT STYLES — Compact Label Table
+   ============================== */
+@media print {
+
+    /* Hide everything except the print labels */
+    .sidebar,
+    .racking-toolbar,
+    .dashboard-header,
+    .rack-shelf-header-actions,
+    .rack-shelf-stats,
+    .product-tooltip,
+    .modal-overlay,
+    .filter-tabs,
+    .search-box,
+    .btn,
+    .badge,
+    nav,
+    .rack-map-grid,
+    .racking-intro,
+    .mobile-menu-btn,
+    .table-container.glass-panel {
+        display: none !important;
+    }
+
+    /* Reset background colors */
+    body,
+    html,
+    #root,
+    .dashboard-layout,
+    .dashboard-main {
+        background: white !important;
+        height: auto !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Show the print labels */
+    .print-only-labels {
+        display: block !important;
+        padding: 20px;
+        width: 100%;
+        background: white;
+    }
+
+    .print-rack-section {
+        margin-bottom: 2rem;
+        page-break-after: always;
+    }
+
+    .print-rack-section:last-child {
+        page-break-after: auto;
+    }
+
+    .print-rack-title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-align: center;
+        text-transform: uppercase;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        color: black;
+    }
+
+    /* Grid Layout for Labels (3 per row) */
+    .print-label-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        width: 100%;
+    }
+
+    /* Individual Label Card */
+    .print-bin-label {
+        border: 2px dashed #000;
+        /* Dashed line for cutting */
+        padding: 15px;
+        height: 140px;
+        /* Fixed height for consistency */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        break-inside: avoid;
+        /* Prevent label from splitting across pages */
+        border-radius: 8px;
+        background: white;
+    }
+
+    .label-rack-name {
+        font-size: 10pt;
+        text-transform: uppercase;
+        color: #555;
+        margin-bottom: 8px;
+    }
+
+    .label-bin-code {
+        font-size: 22pt;
+        font-weight: 800;
+        color: #000;
+        line-height: 1.2;
+    }
+
+    .label-bin-meta {
+        margin-top: 8px;
+        font-size: 9pt;
+        color: #666;
+        font-style: italic;
+    }
+}

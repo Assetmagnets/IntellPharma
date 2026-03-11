@@ -42,12 +42,19 @@ router.post('/register', async (req, res) => {
                 }
             });
 
-            // Create subscription (Basic plan by default)
-            await tx.subscription.create({
+            // Create subscription (1-month free trial, Standard features only)
+            const trialEndDate = new Date();
+            trialEndDate.setDate(trialEndDate.getDate() + 30);
+
+            const subscription = await tx.subscription.create({
                 data: {
                     branchId: branch.id,
-                    plan: 'BASIC',
-                    maxBranches: 1
+                    plan: 'STANDARD',
+                    isTrial: true,
+                    maxBranches: 1,
+                    aiEnabled: false,
+                    analyticsEnabled: false,
+                    endDate: trialEndDate
                 }
             });
 
@@ -60,7 +67,7 @@ router.post('/register', async (req, res) => {
                 }
             });
 
-            return { user, branch };
+            return { user, branch, subscription };
         });
 
         // Generate JWT
@@ -83,7 +90,12 @@ router.post('/register', async (req, res) => {
             },
             branch: {
                 id: result.branch.id,
-                name: result.branch.name
+                name: result.branch.name,
+                subscription: {
+                    plan: result.subscription.plan,
+                    isTrial: result.subscription.isTrial,
+                    endDate: result.subscription.endDate
+                }
             }
         });
     } catch (error) {
@@ -102,10 +114,34 @@ router.post('/login', async (req, res) => {
             include: {
                 branchAccess: {
                     include: {
-                        branch: true
+                        branch: {
+                            include: {
+                                subscription: {
+                                    select: {
+                                        plan: true,
+                                        aiEnabled: true,
+                                        maxBranches: true,
+                                        isTrial: true,
+                                        endDate: true
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
-                ownedBranches: true
+                ownedBranches: {
+                    include: {
+                        subscription: {
+                            select: {
+                                plan: true,
+                                aiEnabled: true,
+                                maxBranches: true,
+                                isTrial: true,
+                                endDate: true
+                            }
+                        }
+                    }
+                }
             }
         });
 
@@ -151,8 +187,12 @@ router.post('/login', async (req, res) => {
             branches
         });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Login failed. Please try again.' });
+        console.error('CRITICAL LOGIN ERROR:', error);
+        res.status(500).json({
+            error: 'Internal Server Error during login.',
+            message: error.message,
+            stack: error.stack
+        });
     }
 });
 
@@ -211,7 +251,9 @@ router.get('/me', authenticate, async (req, res) => {
                                     select: {
                                         plan: true,
                                         aiEnabled: true,
-                                        maxBranches: true
+                                        maxBranches: true,
+                                        isTrial: true,
+                                        endDate: true
                                     }
                                 }
                             }
@@ -227,7 +269,9 @@ router.get('/me', authenticate, async (req, res) => {
                             select: {
                                 plan: true,
                                 aiEnabled: true,
-                                maxBranches: true
+                                maxBranches: true,
+                                isTrial: true,
+                                endDate: true
                             }
                         }
                     }

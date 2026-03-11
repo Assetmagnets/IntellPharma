@@ -20,14 +20,18 @@ export default function AuthPage() {
     const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login';
     const [activeTab, setActiveTab] = useState(initialMode);
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
 
     // Redirect if already authenticated
     useEffect(() => {
-        if (isAuthenticated) {
-            navigate('/dashboard');
+        if (isAuthenticated && user) {
+            if (user.role === 'SUPERADMIN') {
+                navigate('/super-admin/dashboard');
+            } else {
+                navigate('/dashboard');
+            }
         }
-    }, [isAuthenticated, navigate]);
+    }, [isAuthenticated, user, navigate]);
 
     return (
         <div className="auth-page-wrapper">

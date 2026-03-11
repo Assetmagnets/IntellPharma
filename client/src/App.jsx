@@ -20,6 +20,7 @@ import Subscription from './pages/Subscription';
 import Branches from './pages/Branches';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
+import RackManagement from './pages/RackManagement';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import Blog from './pages/Blog';
@@ -29,6 +30,9 @@ import { SuperAdminLayout, SuperAdminDashboard, Pharmacies, ActivityLogs, BlogMa
 import PublicLayout from './layouts/PublicLayout';
 import About from './pages/About';
 import Pricing from './pages/Pricing';
+import Contact from './pages/Contact';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 // Styles
 import './index.css';
 import './styles/glass.css';
@@ -56,6 +60,9 @@ function App() {
                   <Route path="/blog/:id" element={<BlogDetail />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/terms" element={<Terms />} />
                 </Route>
 
                 {/* Protected Routes */}
@@ -127,6 +134,15 @@ function App() {
                   element={
                     <ProtectedRoute roles={['OWNER', 'MANAGER']}>
                       <Settings />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/racking"
+                  element={
+                    <ProtectedRoute roles={['OWNER', 'MANAGER', 'INVENTORY_STAFF']}>
+                      <RackManagement />
                     </ProtectedRoute>
                   }
                 />

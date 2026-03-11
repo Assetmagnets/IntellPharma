@@ -1,4 +1,4 @@
-const prisma = require('../src/lib/prisma');
+const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 
 // Create the first Super Super Admin (Secret Route)

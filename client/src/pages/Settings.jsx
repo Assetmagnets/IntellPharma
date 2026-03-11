@@ -16,10 +16,12 @@ import {
     EyeOff,
     Trash2,
     Send,
-    Zap,
     Crown,
     Building2,
-    Loader2
+    Loader2,
+    Mail,
+    Phone,
+    Lock
 } from 'lucide-react';
 import '../styles/settings.css';
 
@@ -95,7 +97,7 @@ export default function Settings() {
                 // If no subscription found (404), set a default BASIC subscription state
                 console.log('No subscription found, using default BASIC:', subErr);
                 setCurrentSub({
-                    plan: 'BASIC',
+                    plan: 'STANDARD',
                     planDetails: { name: 'Basic', price: 0 },
                     maxBranches: 1,
                     extraBranches: 0,
@@ -123,10 +125,8 @@ export default function Settings() {
     const getPlanIcon = (planId) => {
         switch (planId) {
             case 'PRO':
-            case 'PREMIUM':
+            case 'PRO_ANNUAL':
                 return <Crown size={24} />;
-            case 'ENTERPRISE':
-                return <Building2 size={24} />;
             default:
                 return <Zap size={24} />;
         }
@@ -312,32 +312,41 @@ export default function Settings() {
                                 <form onSubmit={handleProfileUpdate}>
                                     <div className="form-group">
                                         <label className="form-label">Full Name</label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            value={profileData.name}
-                                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                                        />
+                                        <div className="input-with-icon">
+                                            <User size={18} className="input-icon" />
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                value={profileData.name}
+                                                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className="form-group">
                                         <label className="form-label">Email Address</label>
-                                        <input
-                                            type="email"
-                                            className="form-input"
-                                            value={profileData.email}
-                                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                                        />
+                                        <div className="input-with-icon">
+                                            <Mail size={18} className="input-icon" />
+                                            <input
+                                                type="email"
+                                                className="form-input"
+                                                value={profileData.email}
+                                                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className="form-group">
                                         <label className="form-label">Phone Number</label>
-                                        <input
-                                            type="tel"
-                                            className="form-input"
-                                            value={profileData.phone}
-                                            onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                                        />
+                                        <div className="input-with-icon">
+                                            <Phone size={18} className="input-icon" />
+                                            <input
+                                                type="tel"
+                                                className="form-input"
+                                                value={profileData.phone}
+                                                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
 
                                     <button type="submit" className="btn btn-primary" disabled={saving}>
@@ -357,7 +366,8 @@ export default function Settings() {
                                     <div className="form-group">
                                         <label className="form-label">Current Password</label>
                                         <div style={{ display: 'flex', gap: '1rem' }}>
-                                            <div style={{ position: 'relative', flex: 1 }}>
+                                            <div className="input-with-icon" style={{ position: 'relative', flex: 1 }}>
+                                                <Lock size={18} className="input-icon" />
                                                 <input
                                                     type={showCurrentPassword ? "text" : "password"}
                                                     className="form-input"
@@ -368,7 +378,7 @@ export default function Settings() {
                                                     }}
                                                     disabled={isPasswordVerified}
                                                     required
-                                                    style={{ paddingRight: '2.5rem' }}
+                                                    style={{ paddingLeft: '2.75rem', paddingRight: '2.5rem' }}
                                                 />
                                                 <button
                                                     type="button"
@@ -416,7 +426,8 @@ export default function Settings() {
                                         <div className="animate-slideUp">
                                             <div className="form-group">
                                                 <label className="form-label">New Password</label>
-                                                <div style={{ position: 'relative' }}>
+                                                <div className="input-with-icon" style={{ position: 'relative' }}>
+                                                    <Lock size={18} className="input-icon" />
                                                     <input
                                                         type={showNewPassword ? "text" : "password"}
                                                         className="form-input"
@@ -424,7 +435,7 @@ export default function Settings() {
                                                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                                                         required
                                                         minLength={6}
-                                                        style={{ paddingRight: '2.5rem' }}
+                                                        style={{ paddingLeft: '2.75rem', paddingRight: '2.5rem' }}
                                                     />
                                                     <button
                                                         type="button"
@@ -450,14 +461,15 @@ export default function Settings() {
 
                                             <div className="form-group">
                                                 <label className="form-label">Confirm New Password</label>
-                                                <div style={{ position: 'relative' }}>
+                                                <div className="input-with-icon" style={{ position: 'relative' }}>
+                                                    <Lock size={18} className="input-icon" />
                                                     <input
                                                         type={showConfirmPassword ? "text" : "password"}
                                                         className="form-input"
                                                         value={passwordData.confirmPassword}
                                                         onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                                                         required
-                                                        style={{ paddingRight: '2.5rem' }}
+                                                        style={{ paddingLeft: '2.75rem', paddingRight: '2.5rem' }}
                                                     />
                                                     <button
                                                         type="button"

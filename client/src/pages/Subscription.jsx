@@ -36,7 +36,7 @@ export default function Subscription() {
     const [searchParams] = useSearchParams();
 
     // Plan tier order for comparison
-    const PLAN_TIERS = { BASIC: 0, PRO: 1, PREMIUM: 2, ENTERPRISE: 3 };
+    const PLAN_TIERS = { STANDARD: 0, PRO: 1, PRO_ANNUAL: 1 };
 
     useEffect(() => {
         loadSubscriptionData();
@@ -77,8 +77,8 @@ export default function Subscription() {
                 // so the UI still shows the current plan card with Add Extra Branch option
                 console.log('No subscription found, using default BASIC:', subErr);
                 setCurrentSub({
-                    plan: 'BASIC',
-                    planDetails: { name: 'Basic', price: 0 },
+                    plan: 'STANDARD',
+                    planDetails: { name: 'Standard', price: 299 },
                     maxBranches: 1,
                     extraBranches: 0,
                     aiEnabled: false,
@@ -97,12 +97,7 @@ export default function Subscription() {
 
     const handleStripeCheckout = async (plan) => {
         if (plan.price === 0) {
-            alert('Basic plan is free. No payment required!');
-            return;
-        }
-
-        if (plan.id === 'ENTERPRISE') {
-            alert('Please contact sales@intellpharma.com for Enterprise pricing.');
+            alert('This plan requires payment.');
             return;
         }
 
@@ -201,7 +196,7 @@ export default function Subscription() {
     };
 
     const getCurrentPlanTier = () => {
-        const currentPlan = stripeStatus?.plan || currentSub?.plan || 'BASIC';
+        const currentPlan = stripeStatus?.plan || currentSub?.plan || 'STANDARD';
         return PLAN_TIERS[currentPlan] || 0;
     };
 
@@ -245,10 +240,8 @@ export default function Subscription() {
                                 <div className="plan-header">
                                     <div className="plan-badge">
                                         <div className="plan-icon">
-                                            {currentSub.plan === 'BASIC' && <Zap size={20} />}
-                                            {currentSub.plan === 'PRO' && <Crown size={20} />}
-                                            {currentSub.plan === 'PREMIUM' && <Crown size={20} />}
-                                            {currentSub.plan === 'ENTERPRISE' && <Building2 size={20} />}
+                                            {currentSub.plan === 'STANDARD' && <Zap size={20} />}
+                                            {(currentSub.plan === 'PRO' || currentSub.plan === 'PRO_ANNUAL') && <Crown size={20} />}
                                         </div>
                                         <span className="plan-name">{currentSub.planDetails?.name || currentSub.plan}</span>
                                     </div>
@@ -383,24 +376,23 @@ export default function Subscription() {
                                     {plan.id === 'PRO' && <div className="popular-badge">Most Popular</div>}
 
                                     <div className="plan-icon-large">
-                                        {plan.id === 'BASIC' && <Zap size={32} />}
-                                        {plan.id === 'PRO' && <Crown size={32} />}
-                                        {plan.id === 'PREMIUM' && <Crown size={32} />}
-                                        {plan.id === 'ENTERPRISE' && <Building2 size={32} />}
+                                        {plan.id === 'STANDARD' && <Zap size={32} />}
+                                        {(plan.id === 'PRO' || plan.id === 'PRO_ANNUAL') && <Crown size={32} />}
                                     </div>
 
                                     <h3 className="plan-title">{plan.name}</h3>
 
-                                    <div className="plan-price">
+                                    <div className="plan-price-wrap">
                                         {plan.price === 0 ? (
-                                            <span className="price-free">Free</span>
-                                        ) : plan.price === null ? (
-                                            <span className="price-custom">Custom</span>
+                                            <span className="price-free">Free Forever</span>
                                         ) : (
-                                            <>
-                                                <span className="price-amount">{formatCurrency(plan.price)}</span>
-                                                <span className="price-period">/month</span>
-                                            </>
+                                            <div className="price-display">
+                                                <span className="price-amount">{plan.price.toLocaleString('en-IN')}</span>
+                                                <div className="price-details">
+                                                    <span className="price-currency">₹</span>
+                                                    <span className="price-period">/{plan.interval === 'year' ? 'year' : 'month'}</span>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
 
@@ -417,13 +409,9 @@ export default function Subscription() {
                                         <button className="btn btn-success w-full" disabled>
                                             <CheckCircle size={16} /> Current Plan
                                         </button>
-                                    ) : plan.id === 'ENTERPRISE' ? (
-                                        <button className="btn btn-secondary w-full" onClick={() => alert('Contact +91 9777295707 or sales@intellpharma.com for Enterprise pricing')}>
-                                            Contact Sales
-                                        </button>
                                     ) : isLowerOrEqualPlan(plan.id) ? (
                                         <button className="btn btn-secondary w-full" disabled>
-                                            {plan.price === 0 ? 'Free Plan' : 'Included in Current Plan'}
+                                            Included in Current Plan
                                         </button>
                                     ) : (
                                         <button
@@ -463,7 +451,7 @@ export default function Subscription() {
 
                             <div className="billing-info">
                                 <p>
-                                    <strong>Billing Cycle:</strong> Monthly, auto-renewed on the same date
+                                    <strong>Billing Cycle:</strong> Monthly or yearly, auto-renewed
                                 </p>
                                 <p>
                                     <strong>Upgrades:</strong> Take effect immediately with prorated billing

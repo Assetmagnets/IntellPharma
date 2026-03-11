@@ -19,7 +19,8 @@ import {
     ClipboardList,
     Printer,
     User,
-    Loader2
+    Loader2,
+    MessageCircle
 } from 'lucide-react';
 import '../styles/billing.css';
 
@@ -255,6 +256,62 @@ export default function Billing() {
         }).format(amount);
     };
 
+    // Send invoice via WhatsApp (free wa.me link)
+    const handleWhatsAppShare = () => {
+        const phone = invoice?.customerPhone;
+        if (!phone) {
+            alert('Customer phone number is required to send via WhatsApp. Please add a phone number when creating the invoice.');
+            return;
+        }
+
+        // Clean phone number and add India country code
+        let cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+        if (cleanPhone.startsWith('0')) {
+            cleanPhone = cleanPhone.substring(1);
+        }
+        if (!cleanPhone.startsWith('91')) {
+            cleanPhone = '91' + cleanPhone;
+        }
+
+        // Build a formatted invoice message
+        const branchName = invoice.branch?.name || 'IntellPharma';
+        const invoiceDate = new Date(invoice.createdAt).toLocaleDateString('en-IN');
+
+        let message = `🧾 *Invoice from ${branchName}*\n`;
+        message += `━━━━━━━━━━━━━━━━━━\n`;
+        message += `Invoice: #${invoice.invoiceNumber}\n`;
+        message += `Date: ${invoiceDate}\n`;
+        if (invoice.customerName) {
+            message += `Customer: ${invoice.customerName}\n`;
+        }
+        message += `━━━━━━━━━━━━━━━━━━\n\n`;
+
+        // Items
+        message += `*Items:*\n`;
+        invoice.items?.forEach((item, index) => {
+            const qty = Number(item.quantity) % 1 !== 0
+                ? Number(item.quantity).toFixed(2).replace(/\.?0+$/, '')
+                : item.quantity;
+            message += `${index + 1}. ${item.productName} × ${qty} = ₹${parseFloat(item.total).toFixed(2)}\n`;
+        });
+
+        message += `\n━━━━━━━━━━━━━━━━━━\n`;
+        message += `Subtotal: ₹${parseFloat(invoice.subtotal).toFixed(2)}\n`;
+        message += `CGST: ₹${parseFloat(invoice.cgstAmount || 0).toFixed(2)}\n`;
+        message += `SGST: ₹${parseFloat(invoice.sgstAmount || 0).toFixed(2)}\n`;
+        if (parseFloat(invoice.discountAmount || 0) > 0) {
+            message += `Discount: -₹${parseFloat(invoice.discountAmount).toFixed(2)}\n`;
+        }
+        message += `*GRAND TOTAL: ₹${parseFloat(invoice.totalAmount).toFixed(2)}*\n`;
+        message += `━━━━━━━━━━━━━━━━━━\n`;
+        message += `Payment: ${invoice.paymentMethod}\n\n`;
+        message += `Thank you for your purchase! 🙏`;
+
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
     return (
         <div className="dashboard-layout">
             <Sidebar />
@@ -315,13 +372,12 @@ export default function Billing() {
                                         boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)'
                                     }}>
                                         {searchResults.map(product => (
-                                            <div
-                                                key={product.id}
+                                            <div key={product.id}
                                                 className="search-result-item"
                                                 onClick={() => addToCart(product)}
                                                 style={{ cursor: 'pointer' }}
                                             >
-                                                <div className="product-info">
+                                                <div className="product-info" style={{ flex: 1 }}>
                                                     <span className="product-name">{product.name}</span>
                                                     <span className="product-detail">
                                                         {product.genericName} | Stock: {product.quantity}
@@ -333,7 +389,18 @@ export default function Billing() {
                                                                     fontWeight: 500
                                                                 }}>
                                                                     Exp: {new Date(product.expiryDate).toLocaleDateString('en-IN')}
-                                                                    {/* ({getExpiryStatus(product.expiryDate).text}) */}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                        {product.locations && product.locations.length > 0 && (
+                                                            <>
+                                                                <span style={{ margin: '0 8px', color: 'var(--border-color)' }}>|</span>
+                                                                <span style={{
+                                                                    color: '#8B7355',
+                                                                    fontWeight: 600,
+                                                                    fontSize: '0.75rem'
+                                                                }}>
+                                                                    📍 {product.locations[0].rack?.name} › {product.locations[0].binLabel ? `Bin ${product.locations[0].binLabel}` : product.locations[0].shelf?.name}
                                                                 </span>
                                                             </>
                                                         )}
@@ -428,23 +495,27 @@ export default function Billing() {
                                 <User size={20} />
                                 Customer Details
                             </h3>
-                            <div className="form-group">
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="Customer Name"
-                                    value={customerInfo.name}
-                                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <input
-                                    type="tel"
-                                    className="form-input"
-                                    placeholder="Phone Number"
-                                    value={customerInfo.phone}
-                                    onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                                />
+                            <div className="customer-form">
+                                <div className="input-with-icon">
+                                    <User size={18} className="input-icon" />
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Customer Name"
+                                        value={customerInfo.name}
+                                        onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="input-with-icon">
+                                    <Smartphone size={18} className="input-icon" />
+                                    <input
+                                        type="tel"
+                                        className="form-input"
+                                        placeholder="Phone Number"
+                                        value={customerInfo.phone}
+                                        onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -531,8 +602,8 @@ export default function Billing() {
 
                 {/* Invoice Modal - Professional Print Layout */}
                 {showInvoice && invoice && (
-                    <div className="modal-overlay" onClick={() => setShowInvoice(false)}>
-                        <div className="modal invoice-modal" onClick={e => e.stopPropagation()}>
+                    <div id="invoice-overlay-print" className="modal-overlay invoice-overlay" onClick={() => setShowInvoice(false)}>
+                        <div id="invoice-modal-print" className="modal invoice-modal" onClick={e => e.stopPropagation()}>
                             <div className="modal-header no-print">
                                 <h2>Invoice #{invoice.invoiceNumber}</h2>
                                 <button className="modal-close" onClick={() => setShowInvoice(false)}>
@@ -641,6 +712,10 @@ export default function Billing() {
                                 <button className="btn btn-secondary" onClick={() => window.print()}>
                                     <Printer size={18} />
                                     Print
+                                </button>
+                                <button className="btn btn-whatsapp" onClick={handleWhatsAppShare}>
+                                    <MessageCircle size={18} />
+                                    WhatsApp
                                 </button>
                                 <button className="btn btn-primary" onClick={() => setShowInvoice(false)}>
                                     Done

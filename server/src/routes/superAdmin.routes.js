@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const superAdminController = require('../../controllers/superAdmin.controller');
+const superAdminController = require('../controllers/superAdmin.controller');
 const { authenticate, authorize } = require('../middleware/auth');
 
 // Public route (guarded by secret key in body)

@@ -28,20 +28,19 @@ const requireStripe = (req, res, next) => {
     next();
 };
 
-// Price IDs - You'll need to create these in Stripe Dashboard
-// For now, we'll create prices dynamically or use lookup keys
+// Price IDs - Create these in Stripe Dashboard
 const STRIPE_PRICES = {
+    STANDARD: process.env.STRIPE_STANDARD_PRICE_ID || null,
     PRO: process.env.STRIPE_PRO_PRICE_ID || null,
-    PREMIUM: process.env.STRIPE_PREMIUM_PRICE_ID || null,
+    PRO_ANNUAL: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || null,
 };
 
-// Plan configuration with monthly prices (in paise/cents for Stripe)
+// Plan configuration with prices in paise for Stripe
 const PLAN_PRICES = {
-    BASIC: { price: 0, currency: 'inr', name: 'IntellPharma Basic' },
-    PRO: { price: 99900, currency: 'inr', name: 'IntellPharma Pro' },  // ₹999
-    PREMIUM: { price: 199900, currency: 'inr', name: 'IntellPharma Premium' },  // ₹1999
-    ENTERPRISE: { price: null, currency: 'inr', name: 'IntellPharma Enterprise' },  // Custom
-    EXTRA_BRANCH: { price: 49900, currency: 'inr', name: 'IntellPharma Extra Branch' } // ₹499
+    STANDARD: { price: 29900, currency: 'inr', name: 'IntellPharma Standard', interval: 'month' },  // ₹299/mo
+    PRO: { price: 49900, currency: 'inr', name: 'IntellPharma Pro', interval: 'month' },  // ₹499/mo
+    PRO_ANNUAL: { price: 499900, currency: 'inr', name: 'IntellPharma Pro Annual', interval: 'year' },  // ₹4,999/yr
+    EXTRA_BRANCH: { price: 49900, currency: 'inr', name: 'IntellPharma Extra Branch', interval: 'month' } // ₹499/mo
 };
 
 // Create or get Stripe customer for user
@@ -153,14 +152,6 @@ router.post('/create-checkout-session', requireStripe, authenticate, authorize('
             return res.status(400).json({ error: 'Invalid plan selected.' });
         }
 
-        if (planId === 'BASIC') {
-            return res.status(400).json({ error: 'Basic plan is free. No payment required.' });
-        }
-
-        if (planId === 'ENTERPRISE') {
-            return res.status(400).json({ error: 'Please contact sales for Enterprise plan.' });
-        }
-
         const planConfig = PLAN_PRICES[planId];
 
         // Get user with current subscription
@@ -189,10 +180,10 @@ router.post('/create-checkout-session', requireStripe, authenticate, authorize('
                         currency: planConfig.currency,
                         product_data: {
                             name: planConfig.name,
-                            description: `${planConfig.name} - Monthly Subscription`,
+                            description: `${planConfig.name} - ${planConfig.interval === 'year' ? 'Annual' : 'Monthly'} Subscription`,
                         },
                         recurring: {
-                            interval: 'month',
+                            interval: planConfig.interval,
                         },
                         unit_amount: planConfig.price,
                     },
@@ -241,7 +232,7 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
         if (!user.stripeCustomerId) {
             return res.json({
                 hasSubscription: false,
-                plan: 'BASIC',
+                plan: 'STANDARD',
                 status: 'free'
             });
         }
@@ -256,7 +247,7 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
         if (subscriptions.data.length === 0) {
             return res.json({
                 hasSubscription: false,
-                plan: 'BASIC',
+                plan: 'STANDARD',
                 status: 'free'
             });
         }
@@ -271,7 +262,7 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
         if (isExtraBranch) {
             // Get current plan from database, don't override it
             const existingLocalSub = user.ownedBranches[0]?.subscription;
-            planId = existingLocalSub?.plan || 'BASIC';
+            planId = existingLocalSub?.plan || 'STANDARD';
         } else {
             planId = subscription.metadata?.planId || 'PRO';
         }
@@ -280,7 +271,7 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
         if (user.ownedBranches.length > 0) {
             const branch = user.ownedBranches[0];
             const localSub = branch.subscription;
-            const planConfig = PLANS[planId] || PLANS.BASIC;
+            const planConfig = PLANS[planId] || PLANS.STANDARD;
 
             // Safely parse the period end date
             const periodEndTimestamp = subscription.current_period_end;
@@ -300,6 +291,7 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
                     where: { branchId: branch.id },
                     update: {
                         plan: planId,
+                        isTrial: false,
                         maxBranches: planConfig.maxBranches,
                         aiEnabled: planConfig.aiEnabled,
                         analyticsEnabled: planConfig.analyticsEnabled,
@@ -312,6 +304,7 @@ router.get('/subscription-status', requireStripe, authenticate, authorize('OWNER
                     create: {
                         branchId: branch.id,
                         plan: planId,
+                        isTrial: false,
                         maxBranches: planConfig.maxBranches,
                         aiEnabled: planConfig.aiEnabled,
                         analyticsEnabled: planConfig.analyticsEnabled,
@@ -446,7 +439,7 @@ router.get('/verify-session/:sessionId', requireStripe, authenticate, async (req
                             updatedSub = await prisma.subscription.create({
                                 data: {
                                     branchId: branch.id,
-                                    plan: 'BASIC',
+                                    plan: 'STANDARD',
                                     maxBranches: 1,
                                     extraBranches: count,
                                     stripeSubscriptionId: subscription.id,
@@ -494,13 +487,14 @@ router.get('/verify-session/:sessionId', requireStripe, authenticate, async (req
                 const branch = user.ownedBranches[0];
 
                 // Get plan configuration from shared PLANS config
-                const planConfig = PLANS[planId] || PLANS.BASIC;
+                const planConfig = PLANS[planId] || PLANS.STANDARD;
 
                 // Update or create subscription
                 await prisma.subscription.upsert({
                     where: { branchId: branch.id },
                     update: {
                         plan: planId,
+                        isTrial: false,
                         maxBranches: planConfig.maxBranches,
                         aiEnabled: planConfig.aiEnabled,
                         analyticsEnabled: planConfig.analyticsEnabled,
@@ -513,6 +507,7 @@ router.get('/verify-session/:sessionId', requireStripe, authenticate, async (req
                     create: {
                         branchId: branch.id,
                         plan: planId,
+                        isTrial: false,
                         maxBranches: planConfig.maxBranches,
                         aiEnabled: planConfig.aiEnabled,
                         analyticsEnabled: planConfig.analyticsEnabled,
@@ -598,7 +593,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             await prisma.subscription.updateMany({
                 where: { stripeSubscriptionId: subscription.id },
                 data: {
-                    plan: 'BASIC',
+                    plan: 'STANDARD',
                     maxBranches: 1,
                     aiEnabled: false,
                     analyticsEnabled: false,

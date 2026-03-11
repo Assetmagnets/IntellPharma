@@ -16,7 +16,8 @@ import {
     Menu,
     X,
     Sun,
-    Moon
+    Moon,
+    LayoutGrid
 } from 'lucide-react';
 
 import '../styles/sidebar.css';
@@ -30,13 +31,13 @@ export default function Sidebar() {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
     };
 
     const menuItems = [
         { path: '/dashboard', icon: Home, label: 'Dashboard', roles: ['OWNER', 'MANAGER', 'PHARMACIST', 'BILLING_STAFF', 'INVENTORY_STAFF'] },
         { path: '/billing', icon: ReceiptText, label: 'Billing', roles: ['OWNER', 'MANAGER', 'PHARMACIST', 'BILLING_STAFF'] },
         { path: '/inventory', icon: Package, label: 'Inventory', roles: ['OWNER', 'MANAGER', 'PHARMACIST', 'INVENTORY_STAFF'] },
+        { path: '/racking', icon: LayoutGrid, label: 'Smart Racking', roles: ['OWNER', 'MANAGER', 'INVENTORY_STAFF'] },
         { path: '/reports', icon: BarChart3, label: 'Reports', roles: ['OWNER', 'MANAGER'] },
         { path: '/branches', icon: Store, label: 'Branches', roles: ['OWNER'] },
         { path: '/users', icon: Users, label: 'Users', roles: ['OWNER', 'MANAGER'] },
@@ -135,6 +136,67 @@ export default function Sidebar() {
                         );
                     })}
                 </nav>
+
+                {/* Trial Banner */}
+                {currentBranch?.subscription?.isTrial && (
+                    <div className="trial-banner" style={{
+                        margin: '1rem',
+                        padding: '1rem',
+                        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                        borderRadius: '12px',
+                        border: '1px solid #334155',
+                        textAlign: 'center'
+                    }}>
+                        {new Date(currentBranch.subscription.endDate) > new Date() ? (
+                            <>
+                                <div style={{ color: '#fbbf24', fontWeight: '700', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                    Free Trial Active
+                                </div>
+                                <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                                    {Math.max(0, Math.ceil((new Date(currentBranch.subscription.endDate) - new Date()) / (1000 * 60 * 60 * 24)))} days remaining
+                                </div>
+                                <button
+                                    onClick={() => navigate('/subscription')}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.5rem',
+                                        background: 'var(--success)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Upgrade Now
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div style={{ color: '#ef4444', fontWeight: '700', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                    Trial Expired
+                                </div>
+                                <button
+                                    onClick={() => navigate('/subscription')}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.5rem',
+                                        background: '#ef4444',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Subscribe Now
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {/* Theme Toggle */}
                 <div className="theme-toggle">

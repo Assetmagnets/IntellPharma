@@ -15,10 +15,13 @@ import {
     Stethoscope,
     Pill,
     Cross,
-    Truck
+    Truck,
+    Package
 } from 'lucide-react';
 import { useState } from 'react';
 import '../styles/landing.css';
+import '../styles/about.css';
+import ScrollAnimationItem from '../components/ScrollAnimationItem';
 
 // FAQ Component - Enhanced
 const FAQItem = ({ question, answer }) => {
@@ -101,7 +104,7 @@ export default function About() {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
                 gap: '4rem',
-                alignItems: 'start'
+                alignItems: 'center'
             }}>
                 <div style={{ maxWidth: '600px' }}>
                     <div style={{
@@ -153,25 +156,24 @@ export default function About() {
                 </div>
 
                 {/* Hero Image */}
-                <div style={{
-                    position: 'relative',
-                    borderRadius: '24px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-                    padding: '8px',
-                    aspectRatio: '16/10',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    background: 'rgba(255,255,255,0.05)'
-                }}>
+                {/* Hero Image */}
+                <ScrollAnimationItem className="about-image-wrapper" delay={200}>
                     <img
                         src="/images/dashboard-preview.png"
                         alt="IntellPharma Dashboard"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '16px' }}
                     />
-                </div>
+                    <div className="about-image-overlay">
+                        <div className="overlay-content">
+                            <div className="overlay-icon">
+                                <Activity size={24} />
+                            </div>
+                            <div className="overlay-text">
+                                <h4>Smart Dashboard</h4>
+                                <p>Real-time analytics at a glance</p>
+                            </div>
+                        </div>
+                    </div>
+                </ScrollAnimationItem>
             </section>
 
             {/* TRUST STRIP REMOVED FROM HERE */}
@@ -203,13 +205,23 @@ export default function About() {
                         ))}
                     </ul>
                 </div>
-                <div style={{ position: 'relative', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)' }}>
+                <ScrollAnimationItem className="about-image-wrapper" delay={200}>
                     <img
                         src="/images/inventory-preview.png"
                         alt="Inventory Management"
-                        style={{ width: '100%', height: 'auto', display: 'block' }}
                     />
-                </div>
+                    <div className="about-image-overlay">
+                        <div className="overlay-content">
+                            <div className="overlay-icon">
+                                <Package size={24} />
+                            </div>
+                            <div className="overlay-text">
+                                <h4>Inventory Control</h4>
+                                <p>Track expiry & low stock</p>
+                            </div>
+                        </div>
+                    </div>
+                </ScrollAnimationItem>
             </section>
 
             {/* Feature 2: Billing (Text Right) - REVERTED TO ORIGINAL PREVIEW */}
@@ -238,13 +250,23 @@ export default function About() {
                             ))}
                         </ul>
                     </div>
-                    <div style={{ position: 'relative', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)', direction: 'ltr' }}>
+                    <ScrollAnimationItem className="about-image-wrapper" delay={200} style={{ direction: 'ltr' }}>
                         <img
                             src="/images/billing-preview.png"
                             alt="Visual Billing System"
-                            style={{ width: '100%', height: 'auto', display: 'block' }}
                         />
-                    </div>
+                        <div className="about-image-overlay">
+                            <div className="overlay-content">
+                                <div className="overlay-icon">
+                                    <Zap size={24} />
+                                </div>
+                                <div className="overlay-text">
+                                    <h4>Fast Billing</h4>
+                                    <p>GST Invoices in seconds</p>
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollAnimationItem>
                 </div>
             </section>
 

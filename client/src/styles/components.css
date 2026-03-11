@@ -142,6 +142,25 @@
     color: var(--dark-text-secondary);
 }
 
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-icon .input-icon {
+    position: absolute;
+    left: 1rem;
+    color: var(--dark-text-secondary);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.input-with-icon .form-input {
+    padding-left: 2.75rem;
+    width: 100%;
+}
+
 .form-input.error {
     border-color: var(--error);
 }

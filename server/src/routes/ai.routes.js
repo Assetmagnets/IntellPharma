@@ -5,6 +5,33 @@ const { requireFeature } = require('./subscription.routes');
 
 const router = express.Router();
 
+// Shared helper: try multiple Gemini models with fallback on rate limit
+async function callGeminiWithFallback(prompt, imagePart = null) {
+    const { GoogleGenerativeAI } = require("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"];
+    let lastError = null;
+
+    for (const modelName of models) {
+        try {
+            console.log(`Trying model: ${modelName}`);
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const content = imagePart ? [prompt, imagePart] : prompt;
+            const result = await model.generateContent(content);
+            const response = await result.response;
+            return response.text();
+        } catch (err) {
+            console.warn(`Model ${modelName} failed:`, err.message?.substring(0, 100));
+            lastError = err;
+            if (err.message?.includes('429') || err.message?.includes('quota') || err.message?.includes('404')) {
+                continue;
+            }
+            break;
+        }
+    }
+    throw lastError || new Error('All Gemini models failed');
+}
+
 // Default suggested prompts by role
 const defaultPrompts = {
     OWNER: [
@@ -143,10 +170,7 @@ router.post('/prompt', authenticate, requireFeature('ai'), async (req, res) => {
         const startTime = Date.now();
         const lowerPrompt = prompt.toLowerCase();
 
-        // Initialize Gemini
-        const { GoogleGenerativeAI } = require("@google/generative-ai");
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        // Gemini is called after building the prompt below
 
         // Enhanced keyword detection with synonyms and common variations
         const keywords = {
@@ -320,9 +344,7 @@ Tell the user what keywords to use to get data.
 
         const fullPrompt = `${systemContext}\n\n**User Query:** ${prompt}`;
 
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        const responseText = response.text();
+        const responseText = await callGeminiWithFallback(fullPrompt);
 
         const executionTime = Date.now() - startTime;
 
@@ -365,11 +387,7 @@ router.post('/parse-bill', authenticate, requireFeature('ai'), async (req, res) 
     try {
         const { text } = req.body;
 
-        const { GoogleGenerativeAI } = require("@google/generative-ai");
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-        const prompt = `
+        const billPrompt = `
             Extract medicines/products, quantities, and prices (if available) from the following text.
             Text: "${text}"
             
@@ -383,9 +401,7 @@ router.post('/parse-bill', authenticate, requireFeature('ai'), async (req, res) 
             Do not include markdown formatting like \`\`\`json. Just the raw JSON string.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let jsonString = response.text();
+        let jsonString = await callGeminiWithFallback(billPrompt);
 
         // Cleanup potential markdown code blocks
         jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -396,6 +412,182 @@ router.post('/parse-bill', authenticate, requireFeature('ai'), async (req, res) 
     } catch (error) {
         console.error('Bill parsing error:', error);
         res.status(500).json({ error: 'Failed to parse bill text.' });
+    }
+});
+
+// Parse bill from uploaded file (image/PDF) using Gemini Vision
+router.post('/parse-bill-file', authenticate, requireFeature('ai'), async (req, res) => {
+    try {
+        const { fileData, mimeType, branchId } = req.body;
+
+        console.log('Parse bill file request:', { mimeType, branchId, dataLength: fileData?.length || 0 });
+
+        if (!fileData || !mimeType) {
+            return res.status(400).json({ error: 'File data and mime type are required.' });
+        }
+
+
+        // Fetch existing product names from this branch for matching
+        let existingProducts = [];
+        if (branchId) {
+            existingProducts = await prisma.product.findMany({
+                where: { branchId, isActive: true },
+                select: { name: true, genericName: true, mrp: true, purchasePrice: true }
+            });
+        }
+
+        const existingNamesList = existingProducts.map(p => p.name).join(', ');
+
+        const prompt = `You are a pharmacy bill/invoice parser. Analyze this purchase bill image carefully.
+
+Extract ALL medicines/products with their details from this bill/invoice.
+
+EXISTING PRODUCTS IN INVENTORY (try to match names with these for consistency): 
+${existingNamesList || 'No existing products'}
+
+Return ONLY a valid JSON array of objects. Each object must have:
+- "name": string (product/medicine name, capitalize properly, match existing names if similar)
+- "quantity": number (integer quantity purchased)
+- "price": number (purchase price per unit, or null if not visible)
+- "mrp": number (MRP per unit, or null if not visible)
+- "unit": string (e.g., "strip", "box", "bottle", "tablet", "piece", or null)
+- "batchNumber": string (batch/lot number if visible, or null)
+- "expiryDate": string (in YYYY-MM-DD format if visible, or null)
+- "manufacturer": string (manufacturer/company name if visible, or null)
+
+Rules:
+1. Extract every product line visible in the bill
+2. If quantity shows "50 strips" parse as quantity:50, unit:"strip"
+3. Prices should be per-unit, not total. If only total is shown, divide by quantity.
+4. Do NOT include markdown formatting. Just raw JSON array.
+5. If no products found, return []`;
+
+        const imagePart = {
+            inlineData: {
+                data: fileData,
+                mimeType: mimeType
+            }
+        };
+
+        let jsonString = await callGeminiWithFallback(prompt, imagePart);
+
+        // Cleanup potential markdown code blocks
+        jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        const products = JSON.parse(jsonString);
+        console.log(`Bill file parsed: ${products.length} products found`);
+        res.json({ products });
+    } catch (error) {
+        console.error('Bill file parsing error:', error.message || error);
+        const isQuota = error.message?.includes('429') || error.message?.includes('quota');
+        const msg = isQuota
+            ? 'API quota exceeded. Please wait a minute and try again.'
+            : `Failed to parse bill file: ${error.message || 'Unknown error'}`;
+        res.status(isQuota ? 429 : 500).json({ error: msg });
+    }
+});
+
+// Confirm parsed bill data and update inventory
+router.post('/confirm-bill', authenticate, authorize('OWNER', 'MANAGER', 'INVENTORY_STAFF'), requireFeature('ai'), async (req, res) => {
+    try {
+        const { products, branchId } = req.body;
+
+        if (!products || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ error: 'No products to process.' });
+        }
+
+        if (!branchId) {
+            return res.status(400).json({ error: 'Branch ID is required.' });
+        }
+
+        const results = {
+            updated: [],
+            created: [],
+            errors: []
+        };
+
+        for (const item of products) {
+            try {
+                // Try to find existing product by name (case-insensitive)
+                const existingProduct = await prisma.product.findFirst({
+                    where: {
+                        branchId,
+                        isActive: true,
+                        name: { equals: item.name, mode: 'insensitive' }
+                    }
+                });
+
+                if (existingProduct) {
+                    // Update existing product — add stock
+                    const updatedProduct = await prisma.product.update({
+                        where: { id: existingProduct.id },
+                        data: {
+                            quantity: { increment: parseInt(item.quantity) || 0 },
+                            // Update purchase price and MRP if provided (latest bill takes priority)
+                            ...(item.price && { purchasePrice: parseFloat(item.price) }),
+                            ...(item.mrp && { mrp: parseFloat(item.mrp) }),
+                            ...(item.batchNumber && { batchNumber: item.batchNumber }),
+                            ...(item.expiryDate && { expiryDate: new Date(item.expiryDate + 'T00:00:00.000Z') }),
+                            isActive: true
+                        }
+                    });
+
+                    await logAudit(req.user.id, branchId, 'STOCK_UPDATE', 'Product', updatedProduct.id,
+                        `Bill Parser: Added ${item.quantity} to stock. New total: ${updatedProduct.quantity}`, req.ip);
+
+                    results.updated.push({
+                        name: updatedProduct.name,
+                        quantityAdded: parseInt(item.quantity) || 0,
+                        newTotal: Number(updatedProduct.quantity)
+                    });
+                } else {
+                    // Create new product
+                    let parsedExpiryDate = null;
+                    if (item.expiryDate) {
+                        parsedExpiryDate = new Date(item.expiryDate + 'T00:00:00.000Z');
+                    }
+
+                    const newProduct = await prisma.product.create({
+                        data: {
+                            name: item.name.trim(),
+                            manufacturer: item.manufacturer?.trim() || null,
+                            batchNumber: item.batchNumber?.trim() || null,
+                            expiryDate: parsedExpiryDate,
+                            mrp: parseFloat(item.mrp) || parseFloat(item.price) || 0,
+                            purchasePrice: parseFloat(item.price) || 0,
+                            gstRate: 12,
+                            quantity: parseInt(item.quantity) || 0,
+                            minStock: 10,
+                            unit: item.unit?.trim() || 'Pcs',
+                            tabletsPerStrip: 10,
+                            branchId
+                        }
+                    });
+
+                    await logAudit(req.user.id, branchId, 'CREATE', 'Product', newProduct.id,
+                        `Bill Parser: Created product "${newProduct.name}" with qty ${item.quantity}`, req.ip);
+
+                    results.created.push({
+                        name: newProduct.name,
+                        quantity: parseInt(item.quantity) || 0
+                    });
+                }
+            } catch (itemError) {
+                console.error(`Error processing item ${item.name}:`, itemError.message);
+                results.errors.push({
+                    name: item.name,
+                    error: itemError.message
+                });
+            }
+        }
+
+        res.json({
+            message: `Processed ${products.length} items: ${results.updated.length} updated, ${results.created.length} created.`,
+            ...results
+        });
+    } catch (error) {
+        console.error('Confirm bill error:', error);
+        res.status(500).json({ error: 'Failed to process bill confirmation.' });
     }
 });
 

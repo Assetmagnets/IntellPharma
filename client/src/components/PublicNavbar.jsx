@@ -5,7 +5,7 @@ import { Menu, X } from 'lucide-react';
 import '../styles/landing.css';
 
 export default function PublicNavbar() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
@@ -17,6 +17,15 @@ export default function PublicNavbar() {
 
     const handleRegister = () => {
         navigate('/auth?mode=register');
+        setIsOpen(false);
+    };
+
+    const handleDashboardClick = () => {
+        if (user?.role === 'SUPERADMIN') {
+            navigate('/super-admin/dashboard');
+        } else {
+            navigate('/dashboard');
+        }
         setIsOpen(false);
     };
 
@@ -60,17 +69,24 @@ export default function PublicNavbar() {
                 >
                     Blog
                 </Link>
+                <Link
+                    to="/contact"
+                    className={`nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
+                    onClick={() => setIsOpen(false)}
+                >
+                    Contact
+                </Link>
 
                 {/* Mobile Menu Actions */}
                 <div className="mobile-nav-actions">
                     {isAuthenticated ? (
-                        <Link
-                            to="/dashboard"
+                        <button
+                            onClick={handleDashboardClick}
                             className="nav-link"
-                            onClick={() => setIsOpen(false)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
                         >
                             Dashboard
-                        </Link>
+                        </button>
                     ) : (
                         <>
                             <button
@@ -94,9 +110,9 @@ export default function PublicNavbar() {
 
             <div className="nav-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 {isAuthenticated ? (
-                    <Link to="/dashboard" className="btn btn-primary">
+                    <button onClick={handleDashboardClick} className="btn btn-primary">
                         Go to Dashboard
-                    </Link>
+                    </button>
                 ) : (
                     <>
                         <button onClick={handleLogin} className="btn btn-ghost">

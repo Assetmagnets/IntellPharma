@@ -104,6 +104,53 @@ const logAudit = async (userId, branchId, action, entity, entityId, details, ipA
     }
 };
 
+// Check Active Subscription / Trial Expiry
+const requireActiveSubscription = async (req, res, next) => {
+    try {
+        // Superadmin bypasses subscription checks
+        if (req.user.role === 'SUPERADMIN') return next();
+
+        const subscription = await prisma.subscription.findFirst({
+            where: {
+                branch: { ownerId: req.user.role === 'OWNER' ? req.user.id : undefined },
+                ...(req.user.role !== 'OWNER' && {
+                    branch: {
+                        users: { some: { userId: req.user.id } }
+                    }
+                })
+            }
+        });
+
+        if (!subscription) {
+            return res.status(403).json({
+                error: 'No subscription found. Please subscribe to continue.',
+                subscriptionRequired: true
+            });
+        }
+
+        // If trial and expired
+        if (subscription.isTrial && subscription.endDate && new Date(subscription.endDate) < new Date()) {
+            return res.status(403).json({
+                error: 'Your free trial has expired. Please subscribe to continue using IntellPharma.',
+                trialExpired: true
+            });
+        }
+
+        // If not trial and no active Stripe subscription and endDate passed
+        if (!subscription.isTrial && !subscription.stripeSubscriptionId && subscription.endDate && new Date(subscription.endDate) < new Date()) {
+            return res.status(403).json({
+                error: 'Your subscription has expired. Please renew to continue.',
+                subscriptionExpired: true
+            });
+        }
+
+        next();
+    } catch (error) {
+        console.error('Subscription check error:', error);
+        return res.status(500).json({ error: 'Error checking subscription status.' });
+    }
+};
+
 // Confirmation Required for Sensitive Actions
 const requireConfirmation = (req, res, next) => {
     const confirmHeader = req.headers['x-confirm-action'];
@@ -122,6 +169,7 @@ module.exports = {
     authenticate,
     authorize,
     requireBranchAccess,
+    requireActiveSubscription,
     logAudit,
     requireConfirmation
 };

@@ -15,7 +15,10 @@ import {
     EyeOff,
     Edit,
     History,
-    Activity
+    Activity,
+    Mail,
+    Phone,
+    Lock
 } from 'lucide-react';
 import '../styles/users.css';
 
@@ -284,45 +287,55 @@ export default function Users() {
                             <form onSubmit={handleSubmit} className="user-form">
                                 <div className="form-group">
                                     <label className="form-label">Full Name *</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Staff member's name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
+                                    <div className="input-with-icon">
+                                        <User size={18} className="input-icon" />
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            placeholder="Staff member's name"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="form-row">
                                     <div className="form-group">
                                         <label className="form-label">Email *</label>
-                                        <input
-                                            type="email"
-                                            className="form-input"
-                                            placeholder="user@pharmacy.com"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            required
-                                            disabled={!!editingId} // Cannot change email
-                                        />
+                                        <div className="input-with-icon">
+                                            <Mail size={18} className="input-icon" />
+                                            <input
+                                                type="email"
+                                                className="form-input"
+                                                placeholder="user@pharmacy.com"
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                required
+                                                disabled={!!editingId} // Cannot change email
+                                            />
+                                        </div>
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Phone</label>
-                                        <input
-                                            type="tel"
-                                            className="form-input"
-                                            placeholder="+91 XXXXXXXXXX"
-                                            value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        />
+                                        <div className="input-with-icon">
+                                            <Phone size={18} className="input-icon" />
+                                            <input
+                                                type="tel"
+                                                className="form-input"
+                                                placeholder="+91 XXXXXXXXXX"
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
                                 {!editingId && (
                                     <div className="form-group">
                                         <label className="form-label">Temporary Password *</label>
-                                        <div style={{ position: 'relative' }}>
+                                        <div className="input-with-icon" style={{ position: 'relative' }}>
+                                            <Lock size={18} className="input-icon" />
                                             <input
                                                 type={showPassword ? "text" : "password"}
                                                 className="form-input"
@@ -331,7 +344,7 @@ export default function Users() {
                                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                                 required
                                                 minLength={6}
-                                                style={{ paddingRight: '2.5rem' }}
+                                                style={{ paddingLeft: '2.75rem', paddingRight: '2.5rem' }}
                                             />
                                             <button
                                                 type="button"

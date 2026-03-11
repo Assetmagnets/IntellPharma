@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api/v1' : '/api/v1');
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV
+    ? 'http://localhost:8080/api/v1'
+    : 'https://d291jovxqedlil.cloudfront.net/api/v1'); // Fallback to hardcoded PROD URL
+
+console.log('🔌 API URL configured as:', API_URL);
+console.log('🛠️ Environment:', import.meta.env.MODE);
+
 
 const api = axios.create({
     baseURL: API_URL,
@@ -28,6 +34,11 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             window.location.href = '/login';
+        } else if (error.response?.status === 403) {
+            const data = error.response.data;
+            if (data.subscriptionRequired || data.trialExpired || data.subscriptionExpired || data.upgradeURL) {
+                window.location.href = '/subscription';
+            }
         }
         return Promise.reject(error);
     }
@@ -102,6 +113,8 @@ export const billingAPI = {
 export const aiAPI = {
     submitPrompt: (data) => api.post('/ai/prompt', data),
     parseBill: (data) => api.post('/ai/parse-bill', data),
+    parseBillFile: (data) => api.post('/ai/parse-bill-file', data),
+    confirmBill: (data) => api.post('/ai/confirm-bill', data),
     getHistory: (params) => api.get('/ai/prompt-history', { params }),
     getSuggestions: (params) => api.get('/ai/suggested-prompts', { params }),
     createSuggestion: (data) => api.post('/ai/suggested-prompts', data),
@@ -150,6 +163,31 @@ export const blogAPI = {
     getPost: (id) => publicApi.get(`/blog/${id}`),
     getUnreadCount: () => api.get('/blog/unread-count'),
     markAsRead: () => api.post('/blog/mark-read')
+};
+
+// Smart Racking APIs
+export const rackingAPI = {
+    // Rack CRUD
+    getRacks: (branchId) => api.get(`/racking/${branchId}`),
+    getRack: (branchId, rackId) => api.get(`/racking/${branchId}/${rackId}`),
+    createRack: (branchId, data) => api.post(`/racking/${branchId}`, data),
+    updateRack: (branchId, rackId, data) => api.put(`/racking/${branchId}/${rackId}`, data),
+    deleteRack: (branchId, rackId) => api.delete(`/racking/${branchId}/${rackId}`),
+    // Smart assignment
+    suggestLocation: (branchId, productId) => api.post(`/racking/${branchId}/suggest-location`, { productId }),
+    assignLocation: (branchId, data) => api.post(`/racking/${branchId}/assign-location`, data),
+    moveProduct: (branchId, data) => api.post(`/racking/${branchId}/move-product`, data),
+    unassignLocation: (branchId, locationId) => api.delete(`/racking/${branchId}/location/${locationId}`),
+    // Search & Map
+    findProduct: (branchId, query) => api.get(`/racking/${branchId}/find-product`, { params: { q: query } }),
+    getRackMap: (branchId) => api.get(`/racking/${branchId}/map/overview`),
+    // Alerts
+    getAlerts: (branchId) => api.get(`/racking/${branchId}/alerts/all`),
+    // Backfill
+    backfillProducts: (branchId) => api.post(`/racking/${branchId}/backfill`),
+    // Toggle
+    getRackingStatus: (branchId) => api.get(`/racking/${branchId}/racking-status`),
+    toggleRacking: (branchId, enabled) => api.post(`/racking/${branchId}/toggle-racking`, { enabled })
 };
 
 export default api;

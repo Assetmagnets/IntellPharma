@@ -17,7 +17,15 @@ import {
     Search,
     ChevronDown,
     ArrowRight,
-    Lock
+    Lock,
+    Upload,
+    Image,
+    File,
+    Trash2,
+    Edit3,
+    Package,
+    PlusCircle,
+    RefreshCw
 } from 'lucide-react';
 import '../styles/ai.css';
 
@@ -45,6 +53,12 @@ export default function AIAssistant({ isLocked }) {
     const [commandText, setCommandText] = useState('');
     const [parsedData, setParsedData] = useState(null);
     const [processingCommand, setProcessingCommand] = useState(false);
+    const [inputMode, setInputMode] = useState('file'); // 'file' or 'text'
+    const [uploadedFile, setUploadedFile] = useState(null);
+    const [filePreview, setFilePreview] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [confirmResult, setConfirmResult] = useState(null);
+    const fileInputRef = useRef(null);
 
     // Suggested Prompts - fetched from API
     const [suggestions, setSuggestions] = useState([]);
@@ -75,7 +89,6 @@ export default function AIAssistant({ isLocked }) {
             setSuggestions(formattedSuggestions);
         } catch (error) {
             console.error('Failed to fetch suggestions:', error);
-            // Fallback to defaults
             setSuggestions([
                 { text: "What are my top selling products?", category: "Analytics", desc: "Sales analysis", priority: 'medium' },
                 { text: "Show me items running low on stock", category: "Inventory", desc: "Stock alerts", priority: 'medium' },
@@ -91,11 +104,9 @@ export default function AIAssistant({ isLocked }) {
             setShowUpgradeModal(true);
         } else {
             setIsOpen(true);
-            fetchSuggestions(); // Fetch suggestions when chat opens
+            fetchSuggestions();
         }
     };
-
-    // ... (rest of methods: handleSendMessage, handleSuggestionClick, handleParseBill, handleConfirmStock)
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -140,40 +151,140 @@ export default function AIAssistant({ isLocked }) {
         setShowSuggestions(false);
     };
 
+    // ========= FILE UPLOAD HANDLERS =========
+
+    const handleFileSelect = (file) => {
+        if (!file) return;
+
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+        if (!validTypes.includes(file.type)) {
+            alert('Please upload an image (JPG, PNG, WebP) or PDF file.');
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size must be less than 10MB.');
+            return;
+        }
+
+        setUploadedFile(file);
+
+        // Create preview
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => setFilePreview(e.target.result);
+            reader.readAsDataURL(file);
+        } else {
+            setFilePreview(null); // No preview for PDFs
+        }
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        handleFileSelect(file);
+    };
+
+    const handleRemoveFile = () => {
+        setUploadedFile(null);
+        setFilePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    // ========= BILL PARSING =========
+
     const handleParseBill = async () => {
-        if (!commandText.trim()) return;
+        if (inputMode === 'file' && !uploadedFile) return;
+        if (inputMode === 'text' && !commandText.trim()) return;
         setProcessingCommand(true);
 
         try {
-            const res = await aiAPI.parseBill({ text: commandText });
+            let res;
+            if (inputMode === 'file') {
+                // Convert file to base64
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const dataUrl = reader.result;
+                        const base64Data = dataUrl.split(',')[1];
+                        resolve(base64Data);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(uploadedFile);
+                });
+
+                res = await aiAPI.parseBillFile({
+                    fileData: base64,
+                    mimeType: uploadedFile.type,
+                    branchId: currentBranch?.id
+                });
+            } else {
+                res = await aiAPI.parseBill({ text: commandText });
+            }
+
             setParsedData(res.data.products);
         } catch (error) {
-            setMessages(prev => [...prev, {
-                type: 'ai',
-                text: 'Failed to parse the bill text. Please make sure it contains product names and quantities.',
-                isError: true,
-                timestamp: new Date()
-            }]);
+            console.error('Parse error:', error);
+            const errMsg = error.response?.data?.error || 'Failed to parse the bill. Please try again.';
+            alert(errMsg);
         } finally {
             setProcessingCommand(false);
         }
     };
 
-    const handleConfirmStock = () => {
+    // Editable parsed data handlers
+    const handleEditField = (index, field, value) => {
+        setParsedData(prev => prev.map((item, i) =>
+            i === index ? { ...item, [field]: value } : item
+        ));
+    };
+
+    const handleRemoveItem = (index) => {
+        setParsedData(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // ========= CONFIRM & UPDATE INVENTORY =========
+
+    const handleConfirmStock = async () => {
+        if (!parsedData || parsedData.length === 0) return;
         setProcessingCommand(true);
-        // Simulate API call
-        setTimeout(() => {
+
+        try {
+            const res = await aiAPI.confirmBill({
+                products: parsedData,
+                branchId: currentBranch?.id
+            });
+
+            setConfirmResult(res.data);
             setParsedData(null);
             setCommandText('');
+            setUploadedFile(null);
+            setFilePreview(null);
+        } catch (error) {
+            console.error('Confirm error:', error);
+            alert('Failed to update inventory. Please try again.');
+        } finally {
             setProcessingCommand(false);
-            setMode('chat');
-            setMessages(prev => [...prev, {
-                type: 'ai',
-                text: `✅ Successfully processed bill! Added ${parsedData.length} items to inventory.`,
-                timestamp: new Date()
-            }]);
-            setIsOpen(true);
-        }, 1500);
+        }
+    };
+
+    const handleResetBillParser = () => {
+        setParsedData(null);
+        setConfirmResult(null);
+        setCommandText('');
+        setUploadedFile(null);
+        setFilePreview(null);
     };
 
     if (!user) return null;
@@ -384,94 +495,291 @@ export default function AIAssistant({ isLocked }) {
                                 </div>
                             </>
                         ) : (
+                            /* ========= BILL PARSER TAB ========= */
                             <div className="command-area flex flex-col h-full">
-                                <div className="flex-1">
-                                    <div className="bg-dark-surface p-4 rounded-xl border border-dark-border mb-4">
-                                        <h4 className="flex items-center gap-2 mb-2 text-primary-400">
-                                            <FileText size={18} />
-                                            Bill Parsing
-                                        </h4>
-                                        <p className="text-secondary text-sm">
-                                            Paste clean text from a bill or invoice using <strong>Ctrl+V</strong>.
-                                            The AI will identify product names, quantities, and prices automatically.
-                                        </p>
-                                    </div>
+                                <div className="flex-1 bill-parser-scroll">
 
-                                    {!parsedData ? (
-                                        <textarea
-                                            className="w-full h-40 bg-dark-surface border border-dark-border rounded-xl p-4 text-white focus:ring-2 ring-primary-500 focus:outline-none transition-all placeholder:text-secondary"
-                                            placeholder="Paste bill text here...&#10;Example: Bought 50 strips of Crocin for 500rs, and 20 bottles of Cough Syrup..."
-                                            value={commandText}
-                                            onChange={(e) => setCommandText(e.target.value)}
-                                        />
-                                    ) : (
-                                        <div className="parsed-results animate-slideUp">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h5 className="text-success flex items-center gap-2">
-                                                    <Check size={16} /> Extracted Data
-                                                </h5>
+                                    {/* Success Result Screen */}
+                                    {confirmResult ? (
+                                        <div className="bill-confirm-result animate-slideUp">
+                                            <div className="bill-success-icon">
+                                                <Check size={32} />
+                                            </div>
+                                            <h4 className="bill-success-title">Inventory Updated!</h4>
+                                            <p className="bill-success-message">{confirmResult.message}</p>
+
+                                            {confirmResult.updated.length > 0 && (
+                                                <div className="bill-result-section">
+                                                    <h5 className="bill-result-label">
+                                                        <RefreshCw size={14} /> Stock Updated
+                                                    </h5>
+                                                    {confirmResult.updated.map((item, i) => (
+                                                        <div key={i} className="bill-result-item">
+                                                            <span>{item.name}</span>
+                                                            <span className="bill-result-badge updated">+{item.quantityAdded} → {item.newTotal}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {confirmResult.created.length > 0 && (
+                                                <div className="bill-result-section">
+                                                    <h5 className="bill-result-label">
+                                                        <PlusCircle size={14} /> New Products Created
+                                                    </h5>
+                                                    {confirmResult.created.map((item, i) => (
+                                                        <div key={i} className="bill-result-item">
+                                                            <span>{item.name}</span>
+                                                            <span className="bill-result-badge created">Qty: {item.quantity}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {confirmResult.errors.length > 0 && (
+                                                <div className="bill-result-section">
+                                                    <h5 className="bill-result-label text-error">
+                                                        <AlertTriangle size={14} /> Errors
+                                                    </h5>
+                                                    {confirmResult.errors.map((item, i) => (
+                                                        <div key={i} className="bill-result-item">
+                                                            <span>{item.name}</span>
+                                                            <span className="text-error text-xs">{item.error}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <button
+                                                className="bill-new-scan-btn"
+                                                onClick={handleResetBillParser}
+                                            >
+                                                <Upload size={16} /> Parse Another Bill
+                                            </button>
+                                        </div>
+                                    ) : !parsedData ? (
+                                        /* Input Screen — File Upload or Text Paste */
+                                        <>
+                                            <div className="bill-header-card">
+                                                <h4 className="flex items-center gap-2 mb-2 text-primary-400">
+                                                    <FileText size={18} />
+                                                    Bill Parsing
+                                                </h4>
+                                                <p className="text-secondary text-sm">
+                                                    Upload a bill photo/PDF or paste text. AI will extract product data and update your inventory.
+                                                </p>
+                                            </div>
+
+                                            {/* Input Mode Toggle */}
+                                            <div className="bill-input-toggle">
                                                 <button
-                                                    className="text-xs text-error hover:underline"
-                                                    onClick={() => setParsedData(null)}
+                                                    className={`bill-toggle-btn ${inputMode === 'file' ? 'active' : ''}`}
+                                                    onClick={() => setInputMode('file')}
                                                 >
-                                                    Clear Results
+                                                    <Upload size={14} /> Upload File
+                                                </button>
+                                                <button
+                                                    className={`bill-toggle-btn ${inputMode === 'text' ? 'active' : ''}`}
+                                                    onClick={() => setInputMode('text')}
+                                                >
+                                                    <FileText size={14} /> Paste Text
                                                 </button>
                                             </div>
 
-                                            <div className="bg-dark-surface rounded-xl overflow-hidden border border-dark-border">
-                                                <table className="w-full text-sm text-left">
-                                                    <thead className="bg-dark-surface-2 text-secondary uppercase text-xs">
+                                            {inputMode === 'file' ? (
+                                                /* File Upload Zone */
+                                                !uploadedFile ? (
+                                                    <div
+                                                        className={`bill-dropzone ${isDragging ? 'dragging' : ''}`}
+                                                        onDragOver={handleDragOver}
+                                                        onDragLeave={handleDragLeave}
+                                                        onDrop={handleDrop}
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                    >
+                                                        <input
+                                                            ref={fileInputRef}
+                                                            type="file"
+                                                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                                                            style={{ display: 'none' }}
+                                                            onChange={(e) => handleFileSelect(e.target.files[0])}
+                                                        />
+                                                        <div className="bill-dropzone-icon">
+                                                            <Upload size={28} />
+                                                        </div>
+                                                        <p className="bill-dropzone-title">
+                                                            Drag & drop your bill here
+                                                        </p>
+                                                        <p className="bill-dropzone-subtitle">
+                                                            or click to browse • JPG, PNG, PDF (max 10MB)
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    /* File Preview */
+                                                    <div className="bill-file-preview">
+                                                        {filePreview ? (
+                                                            <img src={filePreview} alt="Bill preview" className="bill-preview-image" />
+                                                        ) : (
+                                                            <div className="bill-pdf-badge">
+                                                                <File size={24} />
+                                                                <span>PDF</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="bill-file-info">
+                                                            <span className="bill-file-name">{uploadedFile.name}</span>
+                                                            <span className="bill-file-size">{(uploadedFile.size / 1024).toFixed(1)} KB</span>
+                                                        </div>
+                                                        <button className="bill-remove-file" onClick={handleRemoveFile}>
+                                                            <Trash2 size={14} /> Remove
+                                                        </button>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                /* Text Paste Area */
+                                                <textarea
+                                                    className="bill-text-area"
+                                                    placeholder="Paste bill text here...&#10;Example: Bought 50 strips of Crocin for 500rs, and 20 bottles of Cough Syrup..."
+                                                    value={commandText}
+                                                    onChange={(e) => setCommandText(e.target.value)}
+                                                />
+                                            )}
+                                        </>
+                                    ) : (
+                                        /* Parsed Results — Editable Table */
+                                        <div className="parsed-results animate-slideUp">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h5 className="text-success flex items-center gap-2">
+                                                    <Check size={16} /> Extracted {parsedData.length} Items
+                                                </h5>
+                                                <button
+                                                    className="bill-clear-btn"
+                                                    onClick={() => { setParsedData(null); handleRemoveFile(); }}
+                                                >
+                                                    Clear
+                                                </button>
+                                            </div>
+
+                                            <p className="text-xs text-secondary mb-3">
+                                                <Edit3 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Click any field to edit before confirming.
+                                            </p>
+
+                                            <div className="bill-parsed-table-wrap">
+                                                <table className="bill-parsed-table">
+                                                    <thead>
                                                         <tr>
-                                                            <th className="p-3">Product</th>
-                                                            <th className="p-3">Qty</th>
-                                                            <th className="p-3 text-right">Price</th>
+                                                            <th>Product</th>
+                                                            <th style={{ width: '60px' }}>Qty</th>
+                                                            <th style={{ width: '70px' }}>Price</th>
+                                                            <th style={{ width: '35px' }}></th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-dark-border">
+                                                    <tbody>
                                                         {parsedData.map((item, idx) => (
-                                                            <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                                <td className="p-3 font-medium text-white">{item.name}</td>
-                                                                <td className="p-3 text-secondary">{item.quantity} {item.unit}</td>
-                                                                <td className="p-3 text-right text-primary-400 font-mono">
-                                                                    {item.price ? `₹${item.price}` : '-'}
+                                                            <tr key={idx}>
+                                                                <td>
+                                                                    <input
+                                                                        className="bill-edit-input"
+                                                                        value={item.name}
+                                                                        onChange={(e) => handleEditField(idx, 'name', e.target.value)}
+                                                                    />
+                                                                    {item.manufacturer && (
+                                                                        <span className="bill-manufacturer">{item.manufacturer}</span>
+                                                                    )}
+                                                                </td>
+                                                                <td>
+                                                                    <input
+                                                                        className="bill-edit-input bill-edit-num"
+                                                                        type="number"
+                                                                        value={item.quantity}
+                                                                        onChange={(e) => handleEditField(idx, 'quantity', parseInt(e.target.value) || 0)}
+                                                                    />
+                                                                </td>
+                                                                <td>
+                                                                    <input
+                                                                        className="bill-edit-input bill-edit-num"
+                                                                        type="number"
+                                                                        value={item.price || item.mrp || ''}
+                                                                        onChange={(e) => handleEditField(idx, 'price', parseFloat(e.target.value) || null)}
+                                                                        placeholder="-"
+                                                                    />
+                                                                </td>
+                                                                <td>
+                                                                    <button
+                                                                        className="bill-remove-row"
+                                                                        onClick={() => handleRemoveItem(idx)}
+                                                                        title="Remove"
+                                                                    >
+                                                                        <Trash2 size={13} />
+                                                                    </button>
                                                                 </td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
                                             </div>
+
+                                            {/* Batch/Expiry details if available */}
+                                            {parsedData.some(p => p.batchNumber || p.expiryDate) && (
+                                                <div className="bill-extra-details">
+                                                    <p className="text-xs text-secondary mb-1 font-medium">Additional Details Extracted:</p>
+                                                    {parsedData.filter(p => p.batchNumber || p.expiryDate).map((item, idx) => (
+                                                        <div key={idx} className="bill-extra-row">
+                                                            <span className="bill-extra-name">{item.name}</span>
+                                                            {item.batchNumber && <span className="bill-extra-tag">Batch: {item.batchNumber}</span>}
+                                                            {item.expiryDate && <span className="bill-extra-tag">Exp: {item.expiryDate}</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="mt-4 pt-4 border-t border-dark-border">
-                                    {!parsedData ? (
-                                        <button
-                                            className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-transform active:scale-95"
-                                            onClick={handleParseBill}
-                                            disabled={!commandText.trim() || processingCommand}
-                                        >
-                                            {processingCommand ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" size={20} /> Processing...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Zap size={20} /> Extract Data
-                                                </>
-                                            )}
-                                        </button>
-                                    ) : (
-                                        <button
-                                            className="w-full py-3 bg-success hover:bg-green-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-transform active:scale-95"
-                                            onClick={handleConfirmStock}
-                                            disabled={processingCommand}
-                                        >
-                                            {processingCommand ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
-                                            Confirm & Update Inventory
-                                        </button>
-                                    )}
-                                </div>
+                                {/* Bottom Action Bar */}
+                                {!confirmResult && (
+                                    <div className="bill-action-bar">
+                                        {!parsedData ? (
+                                            <button
+                                                className="bill-action-btn extract"
+                                                onClick={handleParseBill}
+                                                disabled={
+                                                    (inputMode === 'file' && !uploadedFile) ||
+                                                    (inputMode === 'text' && !commandText.trim()) ||
+                                                    processingCommand
+                                                }
+                                            >
+                                                {processingCommand ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin" size={20} />
+                                                        <span>Analyzing{inputMode === 'file' ? ' Image' : ''}...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Zap size={20} />
+                                                        <span>Extract Data</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                className="bill-action-btn confirm"
+                                                onClick={handleConfirmStock}
+                                                disabled={processingCommand || parsedData.length === 0}
+                                            >
+                                                {processingCommand ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin" size={20} />
+                                                        <span>Updating Inventory...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Package size={20} />
+                                                        <span>Confirm & Update Inventory ({parsedData.length})</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

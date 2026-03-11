@@ -111,6 +111,14 @@
   --text-primary: var(--dark-text);
   --text-secondary: var(--dark-text-secondary);
   --border-color: var(--dark-border);
+
+  /* Landing page theme specific */
+  --landing-bg-start: #0a0e1a;
+  --landing-bg-mid: #0f172a;
+  --landing-bg-end: #0a0e1a;
+  --landing-text-main: #ffffff;
+  --landing-text-muted: #94a3b8;
+  --landing-grid: rgba(255, 255, 255, 0.03);
 }
 
 /* Light Mode Variables */
@@ -131,9 +139,17 @@
   --dark-text-secondary: #64748b;
 
   /* Glass effects for light mode */
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-bg-dark: rgba(255, 255, 255, 0.9);
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-bg-dark: rgba(255, 255, 255, 0.95);
   --glass-border: rgba(0, 0, 0, 0.1);
+
+  /* Landing page theme specific - ALWAYS DARK for premium feel */
+  --landing-bg-start: #0a0e1a;
+  --landing-bg-mid: #0f172a;
+  --landing-bg-end: #0a0e1a;
+  --landing-text-main: #ffffff;
+  --landing-text-muted: #94a3b8;
+  --landing-grid: rgba(255, 255, 255, 0.03);
 }
 
 /* Base Reset */

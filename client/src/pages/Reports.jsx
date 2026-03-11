@@ -46,15 +46,12 @@ export default function Reports() {
     const [branchComparison, setBranchComparison] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showTemplateModal, setShowTemplateModal] = useState(false);
-    const [subscriptionPlan, setSubscriptionPlan] = useState('BASIC');
+    const [subscriptionPlan, setSubscriptionPlan] = useState('STANDARD');
 
     // Function to handle export checks
     const checkAccessAndExecute = (action) => {
-        if (!['PRO', 'PREMIUM', 'ENTERPRISE'].includes(subscriptionPlan)) {
-            alert('Upgrade to Premium to access detailed reports');
-            navigate('/subscription');
-            return;
-        }
+        // GST Reports and Basic Exports are available to Standard Plan
+        // Only block if we add specific Pro-only actions later
         action();
     };
 
@@ -422,7 +419,7 @@ export default function Reports() {
         doc.setFont('helvetica', 'bold');
         doc.text('PLAN:', 160, bandTop + 13);
         doc.setFont('helvetica', 'normal');
-        doc.text((currentBranch?.subscription?.plan || 'PREMIUM').toUpperCase(), 175, bandTop + 13);
+        doc.text((currentBranch?.subscription?.plan || 'PRO').toUpperCase(), 175, bandTop + 13);
 
         // Bottom Line of Band
         doc.setDrawColor(200, 200, 200);
@@ -1040,10 +1037,9 @@ export default function Reports() {
     ];
 
     const handleGenerateClick = () => {
-        // Strict check: Redirect if not paid plan
-        if (!['PRO', 'PREMIUM', 'ENTERPRISE'].includes(subscriptionPlan)) {
-            alert('Upgrade to Premium to generate professional reports');
-            navigate('/subscription');
+        // Standard Plan: Generate Basic Report directly
+        if (!['PRO', 'PRO_ANNUAL'].includes(subscriptionPlan)) {
+            generateBasicPDF(false);
             return;
         }
 
@@ -1157,7 +1153,7 @@ export default function Reports() {
                         <button className="btn btn-primary" onClick={handleGenerateClick} title="Generate New Report">
                             <FileText size={18} />
                             Generate Report
-                            {['PRO', 'PREMIUM', 'ENTERPRISE'].includes(subscriptionPlan) && (
+                            {['PRO', 'PRO_ANNUAL'].includes(subscriptionPlan) && (
                                 <Crown size={14} className="ml-1" />
                             )}
                         </button>

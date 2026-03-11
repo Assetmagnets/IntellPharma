@@ -6,37 +6,35 @@ const router = express.Router();
 
 // Subscription plans configuration
 const PLANS = {
-    BASIC: {
-        name: 'Basic',
-        price: 0,
+    STANDARD: {
+        name: 'Standard',
+        price: 299,
+        interval: 'month',
         maxBranches: 1,
         aiEnabled: false,
         analyticsEnabled: false,
-        features: ['Single branch', 'Basic billing', 'Inventory management']
+        whatsappEnabled: false,
+        features: ['Single branch', 'Basic billing', 'Inventory management', 'GST reports']
     },
     PRO: {
         name: 'Pro',
-        price: 999,
-        maxBranches: 3,
+        price: 499,
+        interval: 'month',
+        maxBranches: 2,
         aiEnabled: true,
         analyticsEnabled: true,
-        features: ['Up to 3 branches', 'AI insights', 'Advanced analytics', 'GST reports']
+        whatsappEnabled: true,
+        features: ['Up to 2 branches', 'AI insights', 'Advanced analytics', 'GST reports', 'WhatsApp invoice sharing', 'Priority support']
     },
-    PREMIUM: {
-        name: 'Premium',
-        price: 1999,
-        maxBranches: 10,
+    PRO_ANNUAL: {
+        name: 'Pro Annual',
+        price: 4999,
+        interval: 'year',
+        maxBranches: 2,
         aiEnabled: true,
         analyticsEnabled: true,
-        features: ['Up to 10 branches', 'Full AI suite', 'Custom reports', 'Priority support', 'API access']
-    },
-    ENTERPRISE: {
-        name: 'Enterprise',
-        price: null, // Custom pricing
-        maxBranches: 999,
-        aiEnabled: true,
-        analyticsEnabled: true,
-        features: ['Unlimited branches', 'Dedicated support', 'Custom integrations', 'SLA guarantee']
+        whatsappEnabled: true,
+        features: ['Up to 2 branches', 'AI insights', 'Advanced analytics', 'GST reports', 'WhatsApp invoice sharing', 'Priority support', 'Save ₹988/year']
     }
 };
 
@@ -141,12 +139,21 @@ router.get('/current', authenticate, authorize('OWNER'), async (req, res) => {
         console.log('🔍 subscription/current: extraBranches:', subscription.extraBranches);
         console.log('🔍 subscription/current: total:', subscription.maxBranches + subscription.extraBranches);
 
+        // Calculate trial info
+        const isTrialExpired = subscription.isTrial && subscription.endDate && new Date(subscription.endDate) < new Date();
+        const trialDaysLeft = subscription.isTrial && subscription.endDate
+            ? Math.max(0, Math.ceil((new Date(subscription.endDate) - new Date()) / (1000 * 60 * 60 * 24)))
+            : null;
+
         res.json({
             ...subscription,
             stripeSubscriptionId, // Override with fetched value
             stripeCurrentPeriodEnd, // Override with fetched value
             autoRenew, // Override with fetched value
             planDetails,
+            isTrial: subscription.isTrial,
+            trialExpired: isTrialExpired,
+            trialDaysLeft,
             usage: {
                 branchCount,
                 maxBranches: subscription.maxBranches + subscription.extraBranches,
@@ -454,6 +461,16 @@ const requireFeature = (feature) => {
                     error: 'Analytics features require Pro plan or higher.',
                     upgradeURL: '/subscription/upgrade'
                 });
+            }
+
+            if (feature === 'whatsapp') {
+                const planConfig = PLANS[subscription.plan];
+                if (!planConfig || !planConfig.whatsappEnabled) {
+                    return res.status(403).json({
+                        error: 'WhatsApp invoice sharing requires Pro plan or higher.',
+                        upgradeURL: '/subscription/upgrade'
+                    });
+                }
             }
 
             next();

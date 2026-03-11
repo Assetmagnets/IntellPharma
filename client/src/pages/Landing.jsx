@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
 import SEO from '../components/SEO';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
@@ -19,6 +20,9 @@ import {
     Zap
 } from 'lucide-react';
 import '../styles/landing.css';
+
+
+import ScrollAnimationItem from '../components/ScrollAnimationItem';
 
 export default function Landing() {
     const navigate = useNavigate();
@@ -140,48 +144,48 @@ export default function Landing() {
                 <h2 className="section-title" style={{ background: 'transparent', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}>Digital Solutions for Modern Retail</h2>
                 <p className="section-subtitle">Upgrade your medical shop with our cloud-based tools. From smart billing to AI analytics, we have everything a modern pharmacy needs.</p>
                 <div className="features-grid">
-                    <div className="feature-card">
-                        <div className="feature-icon">
-                            <ReceiptText size={32} />
-                        </div>
-                        <h3>Smart Billing</h3>
-                        <p>Barcode scanning, GST calculation, and instant invoice generation</p>
-                    </div>
-                    <div className="feature-card">
-                        <div className="feature-icon">
-                            <Package size={32} />
-                        </div>
-                        <h3>Inventory Control</h3>
-                        <p>Track stock, expiry dates, and get low-stock alerts automatically</p>
-                    </div>
-                    <div className="feature-card">
-                        <div className="feature-icon">
-                            <Store size={32} />
-                        </div>
-                        <h3>Multi-Branch</h3>
-                        <p>Manage all your pharmacy locations from a single dashboard</p>
-                    </div>
-                    <div className="feature-card">
-                        <div className="feature-icon">
-                            <Sparkles size={32} />
-                        </div>
-                        <h3>AI Analytics</h3>
-                        <p>Get intelligent insights and predictions for better decisions</p>
-                    </div>
-                    <div className="feature-card">
-                        <div className="feature-icon">
-                            <BarChart3 size={32} />
-                        </div>
-                        <h3>GST Reports</h3>
-                        <p>Auto-generate GSTR-1, GSTR-3B and compliance reports</p>
-                    </div>
-                    <div className="feature-card">
-                        <div className="feature-icon">
-                            <Users size={32} />
-                        </div>
-                        <h3>Team Management</h3>
-                        <p>Role-based access control for your entire staff</p>
-                    </div>
+                    {[
+                        {
+                            icon: <ReceiptText size={32} />,
+                            title: "Smart Billing",
+                            description: "Barcode scanning, GST calculation, and instant invoice generation"
+                        },
+                        {
+                            icon: <Package size={32} />,
+                            title: "Inventory Control",
+                            description: "Track stock, expiry dates, and get low-stock alerts automatically"
+                        },
+                        {
+                            icon: <Store size={32} />,
+                            title: "Multi-Branch",
+                            description: "Manage all your pharmacy locations from a single dashboard"
+                        },
+                        {
+                            icon: <Sparkles size={32} />,
+                            title: "AI Analytics",
+                            description: "Get intelligent insights and predictions for better decisions"
+                        },
+                        {
+                            icon: <BarChart3 size={32} />,
+                            title: "GST Reports",
+                            description: "Auto-generate GSTR-1, GSTR-3B and compliance reports"
+                        },
+                        {
+                            icon: <Users size={32} />,
+                            title: "Team Management",
+                            description: "Role-based access control for your entire staff"
+                        }
+                    ].map((feature, index) => (
+                        <ScrollAnimationItem key={index} delay={index * 100} className="h-full">
+                            <div className="feature-card h-full">
+                                <div className="feature-icon">
+                                    {feature.icon}
+                                </div>
+                                <h3>{feature.title}</h3>
+                                <p>{feature.description}</p>
+                            </div>
+                        </ScrollAnimationItem>
+                    ))}
                 </div>
             </section>
 
@@ -192,30 +196,33 @@ export default function Landing() {
                 <p className="section-subtitle">The preferred choice for thousands of medical stores across India.</p>
 
                 <div className="features-grid" style={{ marginTop: '3rem' }}>
-                    <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>GST Compliant Billing</h3>
-                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
-                            Generate 100% accurate GST invoices. Our <strong>medical store billing software</strong> allows you to file GSTR-1 and GSTR-3B reports effortlessly.
-                        </p>
-                    </div>
-                    <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>Expiry Date Tracking</h3>
-                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
-                            Stop losing money on expired medicines. Our <strong>inventory management system</strong> alerts you about near-expiry drugs so you can return or sell them on time.
-                        </p>
-                    </div>
-                    <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>Cloud-Based & Secure</h3>
-                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
-                            Access your shop data from anywhere. IntellPharma is the best <strong>cloud-based pharmacy software in India</strong>, offering bank-grade security and daily backups.
-                        </p>
-                    </div>
-                    <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>Affordable for Small Shops</h3>
-                        <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
-                            Designed for everyone. Whether you strictly need <strong>billing software for a small medical shop</strong> or a multi-chain ERP, we have plans that fit your budget.
-                        </p>
-                    </div>
+                    {[
+                        {
+                            title: "GST Compliant Billing",
+                            content: <>Generate 100% accurate GST invoices. Our <strong>medical store billing software</strong> allows you to file GSTR-1 and GSTR-3B reports effortlessly.</>
+                        },
+                        {
+                            title: "Expiry Date Tracking",
+                            content: <>Stop losing money on expired medicines. Our <strong>inventory management system</strong> alerts you about near-expiry drugs so you can return or sell them on time.</>
+                        },
+                        {
+                            title: "Cloud-Based & Secure",
+                            content: <>Access your shop data from anywhere. IntellPharma is the best <strong>cloud-based pharmacy software in India</strong>, offering bank-grade security and daily backups.</>
+                        },
+                        {
+                            title: "Affordable for Small Shops",
+                            content: <>Designed for everyone. Whether you strictly need <strong>billing software for a small medical shop</strong> or a multi-chain ERP, we have plans that fit your budget.</>
+                        }
+                    ].map((item, index) => (
+                        <ScrollAnimationItem key={index} delay={index * 100} className="h-full">
+                            <div style={{ padding: '2rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', height: '100%' }}>
+                                <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#ffffff', fontWeight: '700' }}>{item.title}</h3>
+                                <p style={{ color: '#cbd5e1', lineHeight: '1.6' }}>
+                                    {item.content}
+                                </p>
+                            </div>
+                        </ScrollAnimationItem>
+                    ))}
                 </div>
             </section>
 

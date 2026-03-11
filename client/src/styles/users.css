@@ -159,6 +159,7 @@
     font-size: 0.8125rem;
     margin-top: 2px;
 }
+
 /* Action Buttons */
 .action-buttons {
     display: flex;
@@ -243,4 +244,3 @@
     color: var(--dark-text-muted);
     font-size: 0.75rem;
 }
-

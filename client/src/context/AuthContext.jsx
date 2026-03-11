@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext(null);
 
@@ -9,15 +10,18 @@ export function AuthProvider({ children }) {
     const [currentBranch, setCurrentBranch] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api/v1' : '/api/v1');
+    const API_URL = import.meta.env.VITE_API_URL ||
+        (import.meta.env.DEV
+            ? 'http://localhost:8080/api/v1'
+            : 'https://d291jovxqedlil.cloudfront.net/api/v1');
 
     useEffect(() => {
-        if (token) {
+        if (token && !user) {
             fetchProfile();
-        } else {
+        } else if (!token) {
             setLoading(false);
         }
-    }, [token]);
+    }, [token, user]);
 
     const fetchProfile = async () => {
         try {
@@ -110,31 +114,38 @@ export function AuthProvider({ children }) {
         return data;
     };
 
-    const logout = async () => {
-        // Call backend to log the logout action before clearing token
-        try {
-            if (token) {
-                await fetch(`${API_URL}/auth/logout`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Logout API error:', error);
-            // Continue with local logout even if API fails
+    const navigate = useNavigate();
+
+    const logout = () => {
+        // 1. Navigate immediately to avoid login page flash
+        navigate('/', { replace: true });
+
+        // 2. Capture token for background API call
+        const currentToken = token;
+
+        // 3. Fire-and-forget backend logout
+        if (currentToken) {
+            fetch(`${API_URL}/auth/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`,
+                    'Content-Type': 'application/json'
+                },
+                keepalive: true
+            }).catch(error => {
+                console.error('Logout API error:', error);
+            });
         }
 
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
-        setBranches([]);
-        setCurrentBranch(null);
-
-        // Redirect to Landing Page
-        window.location.href = '/';
+        // 4. Clear local state in next tick to let Router unmount ProtectedRoute
+        // This prevents the "Login Page" flash by ensuring we are on Landing page before auth is cleared
+        setTimeout(() => {
+            localStorage.removeItem('token');
+            setToken(null);
+            setUser(null);
+            setBranches([]);
+            setCurrentBranch(null);
+        }, 50);
     };
 
     const switchBranch = (branch) => {

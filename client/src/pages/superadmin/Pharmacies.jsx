@@ -63,7 +63,7 @@ export default function Pharmacies() {
 
     const getPlanIcon = (plan) => {
         switch (plan) {
-            case 'PREMIUM': return <Crown size={14} />;
+            case 'PRO_ANNUAL': return <Crown size={14} />;
             case 'PRO': return <Zap size={14} />;
             default: return <Shield size={14} />;
         }
@@ -71,7 +71,7 @@ export default function Pharmacies() {
 
     const getPlanGradient = (plan) => {
         switch (plan) {
-            case 'PREMIUM': return 'linear-gradient(135deg, #a855f7, #7c3aed)';
+            case 'PRO_ANNUAL': return 'linear-gradient(135deg, #a855f7, #7c3aed)';
             case 'PRO': return 'linear-gradient(135deg, var(--primary-500), var(--primary-700))';
             default: return 'linear-gradient(135deg, #64748b, #475569)';
         }
@@ -95,7 +95,7 @@ export default function Pharmacies() {
             pharmacy.name,
             pharmacy.owner?.name || 'N/A',
             pharmacy.owner?.email || 'N/A',
-            pharmacy.subscription?.plan || 'BASIC',
+            pharmacy.subscription?.plan || 'STANDARD',
             pharmacy._count?.users || 0,
             pharmacy._count?.invoices || 0,
             pharmacy.isActive ? 'Active' : 'Suspended',
@@ -342,7 +342,7 @@ export default function Pharmacies() {
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                                     }}>
                                         {getPlanIcon(pharmacy.subscription?.plan)}
-                                        {pharmacy.subscription?.plan || 'BASIC'}
+                                        {pharmacy.subscription?.plan || 'STANDARD'}
                                     </span>
                                     {pharmacy.subscription?.endDate && (
                                         <span style={{

@@ -117,12 +117,13 @@ export default function PaymentSuccess() {
             ];
         }
         // Plan-based benefits
-        if (planName === 'PREMIUM') {
+        if (planName === 'PRO_ANNUAL') {
             return [
-                'Up to 10 branches',
-                'Advanced AI features',
-                'Premium analytics & reports',
-                'Priority 24/7 support'
+                'Up to 3 branches',
+                'AI features enabled',
+                'Advanced analytics',
+                'Priority support',
+                'Save ₹988/year'
             ];
         }
         // Default to PRO features
@@ -190,7 +191,7 @@ export default function PaymentSuccess() {
                             <button
                                 className="btn btn-secondary"
                                 onClick={() => navigate('/dashboard')}
-                            >   
+                            >
                                 Go to Dashboard
                             </button>
                         </div>

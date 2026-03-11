@@ -24,7 +24,9 @@ enum Role {
 
 enum SubscriptionPlan {
   BASIC
+  STANDARD
   PRO
+  PRO_ANNUAL
   PREMIUM
   ENTERPRISE
 }
@@ -41,6 +43,25 @@ enum InvoiceStatus {
   PARTIAL
   PENDING
   REFUNDED
+}
+
+enum StorageType {
+  GENERAL
+  REFRIGERATED
+  CONTROLLED
+  HAZARDOUS
+  BULK
+}
+
+enum ProductForm {
+  TABLET
+  CAPSULE
+  SYRUP
+  INJECTION
+  CREAM
+  DROPS
+  POWDER
+  OTHER
 }
 
 // =====================
@@ -80,6 +101,7 @@ model Branch {
   phone           String?
   gstNumber       String?
   isActive        Boolean   @default(true)
+  smartRackingEnabled Boolean @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -94,6 +116,7 @@ model Branch {
   stockTransfers  StockTransfer[]
   auditLogs       AuditLog[]
   subscription    Subscription?
+  racks           Rack[]
 }
 
 model BranchUser {
@@ -112,7 +135,8 @@ model BranchUser {
 model Subscription {
   id              String            @id @default(uuid())
   branchId        String            @unique
-  plan            SubscriptionPlan  @default(BASIC)
+  plan            SubscriptionPlan  @default(STANDARD)
+  isTrial         Boolean           @default(false)
   maxBranches     Int               @default(1)
   extraBranches   Int               @default(0)
   aiEnabled       Boolean           @default(false)
@@ -147,6 +171,8 @@ model Product {
   minStock        Int       @default(10)
   unit            String    @default("Pcs")
   tabletsPerStrip Int       @default(10)
+  form            ProductForm @default(TABLET)
+  storageType     StorageType @default(GENERAL)
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -156,6 +182,7 @@ model Product {
 
   invoiceItems    InvoiceItem[]
   stockTransfers  StockTransferItem[]
+  locations       ProductLocation[]
 
   @@index([barcode])
   @@index([name])
@@ -334,5 +361,65 @@ model InvoiceSequence {
   seq       Int    @default(0)
 
   @@unique([branchId, yearMonth])
+}
+
+// =====================
+// SMART RACKING SYSTEM
+// =====================
+
+model Rack {
+  id              String      @id @default(uuid())
+  branchId        String
+  name            String      // e.g., "Rack A", "Fridge 1"
+  type            StorageType @default(GENERAL)
+  description     String?
+  totalShelves    Int         @default(5)
+  categoryTags    String[]    @default([])
+  maxCapacity     Int?        // Optional total capacity metric
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  branch          Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  shelves         Shelf[]
+  locations       ProductLocation[]
+
+  @@unique([branchId, name])
+  @@index([branchId])
+}
+
+model Shelf {
+  id              String      @id @default(uuid())
+  rackId          String
+  name            String      // e.g., "Shelf 1", "Top"
+  levelNumber     Int         // 1 = Top, higher = lower
+  priority        Int         @default(0) // Higher = Easier access (eye level)
+  maxItems        Int?        // Optional capacity per shelf
+  createdAt       DateTime    @default(now())
+
+  rack            Rack        @relation(fields: [rackId], references: [id], onDelete: Cascade)
+  locations       ProductLocation[]
+
+  @@unique([rackId, levelNumber])
+}
+
+model ProductLocation {
+  id              String      @id @default(uuid())
+  productId       String
+  branchId        String
+  rackId          String
+  shelfId         String
+  binLabel        String?     // e.g., "A1", "Left", "Bin 3"
+  quantity        Decimal     @db.Decimal(10, 2) @default(0)
+  assignedAt      DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rack            Rack        @relation(fields: [rackId], references: [id], onDelete: Cascade)
+  shelf           Shelf       @relation(fields: [shelfId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, shelfId])  // A product is in one position per shelf
+  @@index([branchId])
+  @@index([rackId])
 }
 

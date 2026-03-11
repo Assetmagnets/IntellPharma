@@ -176,25 +176,86 @@
 .product-modal {
     max-width: 700px;
     width: 95%;
+    max-height: 90vh;
     background: var(--dark-surface);
     border: 1px solid var(--dark-border);
     border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.product-modal .modal-header {
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--dark-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.product-modal .modal-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark-text);
+    margin: 0;
 }
 
 .product-form {
     padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    gap: 1.25rem;
 }
 
 @media (max-width: 600px) {
     .form-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.product-modal .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.product-modal .form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dark-text-secondary);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.product-modal .form-input,
+.product-modal select.form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--dark-surface-2);
+    border: 1px solid var(--dark-border);
+    border-radius: 10px;
+    color: var(--dark-text);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.product-modal .form-input::placeholder {
+    color: var(--dark-text-secondary);
+    opacity: 0.6;
+}
+
+.product-modal .form-input:focus,
+.product-modal select.form-input:focus {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(0, 102, 230, 0.15);
 }
 
 .modal-actions {

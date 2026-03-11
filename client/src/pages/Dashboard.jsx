@@ -33,33 +33,45 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (user?.role === 'SUPERADMIN') {
+            window.location.href = '/super-admin/dashboard';
+            return;
+        }
         if (currentBranch) {
             loadDashboardData();
         }
-    }, [currentBranch]);
+    }, [currentBranch, user]);
 
     const loadDashboardData = async () => {
         try {
             setLoading(true);
 
-            // Today's date range
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // Helper to format date as YYYY-MM-DD (Local)
+            // This prevents timezone shifts that occur with toISOString() on setHours(0) dates
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
 
-            // Yesterday's date range
+            const today = new Date();
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
 
+            const todayStr = formatDate(today);
+            const yesterdayStr = formatDate(yesterday);
+
             const [salesRes, yesterdaySalesRes, lowStockRes, expiringRes, criticalRes] = await Promise.all([
-                // Today's sales (Start: Today 00:00, End: Today 23:59 via backend logic)
+                // Today's sales
                 billingAPI.getSalesSummary(currentBranch.id, {
-                    startDate: today.toISOString(),
-                    endDate: today.toISOString()
+                    startDate: todayStr,
+                    endDate: todayStr
                 }).catch(() => ({ data: { totalSales: 0, invoiceCount: 0 } })),
-                // Yesterday's sales (Start: Yesterday 00:00, End: Yesterday 23:59 via backend logic)
+                // Yesterday's sales
                 billingAPI.getSalesSummary(currentBranch.id, {
-                    startDate: yesterday.toISOString(),
-                    endDate: yesterday.toISOString()
+                    startDate: yesterdayStr,
+                    endDate: yesterdayStr
                 }).catch(() => ({ data: { totalSales: 0, invoiceCount: 0 } })),
                 inventoryAPI.getLowStock(currentBranch.id).catch(() => ({ data: [] })),
                 inventoryAPI.getExpiring(currentBranch.id).catch(() => ({ data: [] })),

@@ -169,6 +169,15 @@ router.get('/:branchId', authenticate, requireBranchAccess, async (req, res) => 
 
         const products = await prisma.product.findMany({
             where,
+            include: {
+                locations: {
+                    include: {
+                        rack: { select: { id: true, name: true } },
+                        shelf: { select: { id: true, name: true, levelNumber: true } }
+                    },
+                    take: 1
+                }
+            },
             orderBy: { name: 'asc' }
         });
 
@@ -232,6 +241,145 @@ router.post('/:branchId', authenticate, authorize('OWNER', 'MANAGER', 'INVENTORY
                 branchId
             }
         });
+
+        // =============================================
+        // AUTO-ASSIGN product to a rack (only if enabled)
+        // =============================================
+        const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { smartRackingEnabled: true } });
+        if (branch?.smartRackingEnabled) {
+            try {
+                const storageType = product.storageType || 'GENERAL';
+
+                // 1. Find an existing rack that matches (or any active rack)
+                let rack = await prisma.rack.findFirst({
+                    where: { branchId, isActive: true, type: storageType },
+                    include: {
+                        shelves: {
+                            orderBy: { priority: 'desc' },
+                            include: { _count: { select: { locations: true } } }
+                        },
+                        _count: { select: { locations: true } }
+                    }
+                });
+
+                // 2. If no matching rack, try any GENERAL rack
+                if (!rack && storageType !== 'GENERAL') {
+                    rack = await prisma.rack.findFirst({
+                        where: { branchId, isActive: true, type: 'GENERAL' },
+                        include: {
+                            shelves: {
+                                orderBy: { priority: 'desc' },
+                                include: { _count: { select: { locations: true } } }
+                            },
+                            _count: { select: { locations: true } }
+                        }
+                    });
+                }
+
+                // 3. If still no rack → auto-create a default "General Rack" with 5 shelves
+                if (!rack) {
+                    const defaultShelfCount = 5;
+                    rack = await prisma.$transaction(async (tx) => {
+                        const newRack = await tx.rack.create({
+                            data: {
+                                branchId,
+                                name: 'General Rack',
+                                type: 'GENERAL',
+                                description: 'Auto-created default rack',
+                                totalShelves: defaultShelfCount,
+                                categoryTags: [],
+                                maxCapacity: defaultShelfCount * 20
+                            }
+                        });
+
+                        const shelvesData = [];
+                        for (let i = 1; i <= defaultShelfCount; i++) {
+                            const mid = Math.ceil(defaultShelfCount / 2);
+                            const priority = Math.max(0, 10 - Math.abs(i - mid));
+                            shelvesData.push({
+                                rackId: newRack.id,
+                                name: `Shelf ${i}`,
+                                levelNumber: i,
+                                priority
+                            });
+                        }
+                        await tx.shelf.createMany({ data: shelvesData });
+
+                        return tx.rack.findUnique({
+                            where: { id: newRack.id },
+                            include: {
+                                shelves: {
+                                    orderBy: { priority: 'desc' },
+                                    include: { _count: { select: { locations: true } } }
+                                },
+                                _count: { select: { locations: true } }
+                            }
+                        });
+                    });
+
+                    console.log(`Auto-created "General Rack" for branch ${branchId}`);
+                }
+
+                // 4. Pick the shelf with the fewest items (highest priority first as tiebreaker)
+                let bestShelf = rack.shelves.reduce((best, shelf) => {
+                    if (shelf._count.locations < best._count.locations) return shelf;
+                    if (shelf._count.locations === best._count.locations && shelf.priority > best.priority) return shelf;
+                    return best;
+                }, rack.shelves[0]);
+
+                // 4b. If all shelves are crowded (4+ items each), auto-add a new shelf
+                const MAX_ITEMS_PER_SHELF = 4;
+                const allShelvesFullish = rack.shelves.every(s => s._count.locations >= MAX_ITEMS_PER_SHELF);
+
+                if (allShelvesFullish) {
+                    const newLevelNumber = rack.shelves.length + 1;
+                    const mid = Math.ceil(newLevelNumber / 2);
+                    const priority = Math.max(0, 10 - Math.abs(newLevelNumber - mid));
+
+                    bestShelf = await prisma.shelf.create({
+                        data: {
+                            rackId: rack.id,
+                            name: `Shelf ${newLevelNumber}`,
+                            levelNumber: newLevelNumber,
+                            priority
+                        }
+                    });
+                    bestShelf._count = { locations: 0 };
+
+                    // Update rack's totalShelves and maxCapacity
+                    await prisma.rack.update({
+                        where: { id: rack.id },
+                        data: {
+                            totalShelves: newLevelNumber,
+                            maxCapacity: newLevelNumber * 20
+                        }
+                    });
+
+                    console.log(`Auto-expanded rack "${rack.name}" → added Shelf ${newLevelNumber}`);
+                }
+
+                // 5. Generate a bin label
+                const existingInShelf = bestShelf._count.locations;
+                const binLabel = `${String.fromCharCode(65 + (existingInShelf % 26))}${Math.floor(existingInShelf / 26) + 1}`;
+
+                // 6. Create the ProductLocation entry
+                await prisma.productLocation.create({
+                    data: {
+                        productId: product.id,
+                        branchId,
+                        rackId: rack.id,
+                        shelfId: bestShelf.id,
+                        binLabel,
+                        quantity: parseFloat(quantity || 0)
+                    }
+                });
+
+                console.log(`Auto-assigned "${product.name}" → ${rack.name} > ${bestShelf.name} [${binLabel}]`);
+            } catch (rackError) {
+                // Don't fail the product creation if racking auto-assign fails
+                console.error('Auto-rack assignment failed (product still created):', rackError.message);
+            }
+        } // end if smartRackingEnabled
 
         await logAudit(req.user.id, branchId, 'CREATE', 'Product', product.id, `Created product: ${product.name}`, req.ip);
 

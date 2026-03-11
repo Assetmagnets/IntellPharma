@@ -9,7 +9,6 @@ export default function Header({ title, icon: Icon, children }) {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
     };
 
     return (

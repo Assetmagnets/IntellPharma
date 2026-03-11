@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const { authenticate, authorize, requireBranchAccess, logAudit } = require('../middleware/auth');
+const { requireFeature } = require('./subscription.routes');
 
 const router = express.Router();
 
@@ -9,7 +10,8 @@ const router = express.Router();
 const generateInvoiceNumber = async (tx, branchId) => {
     const date = new Date();
     const yearMonth = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
-    const prefix = `INV${yearMonth}`;
+    const branchPrefix = branchId ? branchId.substring(0, 4).toUpperCase() : 'DEF';
+    const prefix = `INV-${branchPrefix}-${yearMonth}`;
 
     // Atomic increment using upsert
     // This ensures that even if called in parallel, the database locks the row and increments safely
@@ -341,11 +343,12 @@ router.get('/:branchId/reports/summary', authenticate, authorize('OWNER', 'MANAG
 
         const where = { branchId };
         if (startDate && endDate) {
-            const endObj = new Date(endDate);
-            endObj.setHours(23, 59, 59, 999);
+            // Parse dates as UTC explicitly to avoid server timezone issues
+            const startObj = new Date(startDate + 'T00:00:00.000Z');
+            const endObj = new Date(endDate + 'T23:59:59.999Z');
 
             where.createdAt = {
-                gte: new Date(startDate),
+                gte: startObj,
                 lte: endObj
             };
         }
@@ -388,17 +391,18 @@ router.get('/:branchId/reports/summary', authenticate, authorize('OWNER', 'MANAG
 });
 
 // Get advanced report data
-router.get('/:branchId/reports/advanced', authenticate, authorize('OWNER', 'MANAGER'), requireBranchAccess, async (req, res) => {
+router.get('/:branchId/reports/advanced', authenticate, authorize('OWNER', 'MANAGER'), requireBranchAccess, requireFeature('analytics'), async (req, res) => {
     try {
         const { branchId } = req.params;
         const { startDate, endDate } = req.query;
 
-        const endObj = new Date(endDate);
-        endObj.setHours(23, 59, 59, 999);
+        // Parse dates as UTC explicitly to avoid server timezone issues
+        const startObj = new Date(startDate + 'T00:00:00.000Z');
+        const endObj = new Date(endDate + 'T23:59:59.999Z');
 
         const dateFilter = {
             createdAt: {
-                gte: new Date(startDate),
+                gte: startObj,
                 lte: endObj
             }
         };
