@@ -83,9 +83,9 @@
     position: fixed;
     bottom: 6.5rem;
     right: 2rem;
-    width: 450px;
-    max-width: calc(100vw - 2rem);
-    height: 650px;
+    width: 850px;
+    max-width: calc(100vw - 4rem);
+    height: 750px;
     max-height: calc(100vh - 8rem);
     background: var(--dark-bg, #0f172a);
     border: 1px solid var(--dark-border);

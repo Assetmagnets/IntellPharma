@@ -6,18 +6,27 @@ const { requireFeature } = require('./subscription.routes');
 const router = express.Router();
 
 // Shared helper: try multiple Gemini models with fallback on rate limit
-async function callGeminiWithFallback(prompt, imagePart = null) {
+async function callGeminiWithFallback(prompt, imagePart = null, generationConfig = null, systemInstruction = null) {
     const { GoogleGenerativeAI } = require("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"];
+    const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
     let lastError = null;
 
     for (const modelName of models) {
         try {
             console.log(`Trying model: ${modelName}`);
-            const model = genAI.getGenerativeModel({ model: modelName });
+            
+            // Build model options
+            const modelOptions = { model: modelName };
+            if (systemInstruction) modelOptions.systemInstruction = systemInstruction;
+            
+            const model = genAI.getGenerativeModel(modelOptions);
             const content = imagePart ? [prompt, imagePart] : prompt;
-            const result = await model.generateContent(content);
+            
+            // Pass generationConfig if provided
+            const requestOptions = generationConfig ? { generationConfig } : {};
+            
+            const result = await model.generateContent(content, requestOptions);
             const response = await result.response;
             return response.text();
         } catch (err) {
@@ -391,24 +400,110 @@ router.post('/parse-bill', authenticate, requireFeature('ai'), async (req, res) 
             Extract medicines/products, quantities, and prices (if available) from the following text.
             Text: "${text}"
             
-            Return ONLY a valid JSON array of objects. Each object should have:
-            - "name": string (product name, capitalized properly)
-            - "quantity": number (integer)
-            - "price": number (or null if not mentioned)
-            - "unit": string (e.g., "strip", "box", "tablet", or null)
+            CRITICAL EXTRACTION RULES FOR SAAS:
+            - "rawQty": The exact number of units purchased (e.g., "5", "10 boxes").
+            - "packSize": The exact pack size description (e.g., "10's", "1x15", "15 Tab"). If not mentioned, return empty string "".
+            DO NOT perform math. Just return the text strings.
             
+            Return ONLY a valid JSON array of objects.
             If no products are found, return empty array [].
-            Do not include markdown formatting like \`\`\`json. Just the raw JSON string.
         `;
 
-        let jsonString = await callGeminiWithFallback(billPrompt);
+        const SchemaType = require("@google/generative-ai").SchemaType;
+        const generationConfig = {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: SchemaType.ARRAY,
+                description: "List of products extracted from the text",
+                items: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        name: { type: SchemaType.STRING, description: "Product name" },
+                        rawQty: { type: SchemaType.STRING, description: "The exact Quantity text written on the bill (e.g., '10', '5 Boxes')" },
+                        packSize: { type: SchemaType.STRING, description: "The exact text from the PACK or PKG column (e.g., '10', '1x15', '15'). CRITICAL: Do NOT miss this column!", nullable: true },
+                        price: { type: SchemaType.NUMBER, description: "Price if mentioned", nullable: true },
+                        unit: { type: SchemaType.STRING, description: "Packaging unit if mentioned", nullable: true }
+                    },
+                    required: ["name", "rawQty"]
+                }
+            }
+        };
+
+        let jsonString = await callGeminiWithFallback(billPrompt, null, generationConfig);
 
         // Cleanup potential markdown code blocks
         jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
 
         const products = JSON.parse(jsonString);
 
-        res.json({ products });
+        // Helper to parse pack strings like "1x15", "20's", "10 Tab", "100ML"
+        // SAFE FOR SaaS: only multiplies explicit AxB patterns, never random numbers
+        const parseQuantityString = (str) => {
+            if (!str) return 1;
+            let s = str.toString().toUpperCase().trim();
+            
+            // Remove volume/weight parts entirely — these are NOT pack multipliers
+            s = s.replace(/\d+\s*(ML|GM|KG|L|LITER|LITRE|MG|MCG|VIAL|AMP|TUBE)S?\b/gi, '').trim();
+            if (!s) return 1;
+            
+            // Remove common packaging unit words (not multipliers)
+            s = s.replace(/\b(TAB|TABS|TABLET|TABLETS|STRIP|STRIPS|CAP|CAPS|CAPSULE|CAPSULES|BOX|PCS|PIECES|BOTTLE|BOTTLES|UNIT|UNITS|NOS|'S)\b/gi, '').trim();
+            if (!s) return 1;
+            
+            // Pattern 1: Explicit multiplication like "1x15", "2X10", "1x15x3"
+            if (/\d+\s*[xX×]\s*\d+/.test(s)) {
+                const parts = s.split(/[xX×]/i).map(p => parseInt(p.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+                if (parts.length > 0) {
+                    return parts.reduce((acc, n) => acc * n, 1);
+                }
+            }
+            
+            // Pattern 2: Single clean number like "10", "15", "20's" (after stripping)
+            const singleNum = s.match(/^\s*(\d+)\s*$/);
+            if (singleNum) {
+                const num = parseInt(singleNum[1], 10);
+                return num > 0 ? num : 1;
+            }
+            
+            // Default: unable to parse confidently — return 1 (safe for SaaS)
+            return 1;
+        };
+
+        const finalProducts = products.map(p => {
+            // CRITICAL: Only use rawQty — never fall back to p.quantity which may be pre-multiplied by AI
+            let baseQty = 1;
+            if (p.rawQty !== undefined && p.rawQty !== null) {
+                const parsed = parseFloat(p.rawQty.toString().match(/[\d.]+/)?.[0] || '1');
+                if (!isNaN(parsed) && parsed > 0) baseQty = parsed;
+            } else {
+                console.warn(`[parse-bill] Item "${p.name}" missing rawQty, defaulting to 1`);
+            }
+            const multiplier = parseQuantityString(p.rawPack || p.packSize);
+            const finalQuantity = baseQty * multiplier;
+            
+            // Sanity check for SaaS: warn if result seems abnormally large
+            if (multiplier > 1 && finalQuantity > 5000) {
+                console.warn(`[parse-bill] Unusually large quantity for "${p.name}": ${baseQty} × ${multiplier} = ${finalQuantity}`);
+            }
+            
+            return {
+                name: p.name,
+                baseQty: baseQty,
+                packSize: multiplier,
+                quantity: finalQuantity,
+                price: p.price,
+                mrp: p.mrp,
+                unit: p.unit,
+                batchNumber: p.batchNumber,
+                expiryDate: (() => {
+                    const d = normalizeExpiryDate(p.expiryDate);
+                    return d ? d.toISOString().substring(0, 10) : p.expiryDate || null;
+                })(),
+                manufacturer: p.manufacturer
+            };
+        });
+
+        res.json({ products: finalProducts });
     } catch (error) {
         console.error('Bill parsing error:', error);
         res.status(500).json({ error: 'Failed to parse bill text.' });
@@ -438,29 +533,65 @@ router.post('/parse-bill-file', authenticate, requireFeature('ai'), async (req, 
 
         const existingNamesList = existingProducts.map(p => p.name).join(', ');
 
-        const prompt = `You are a pharmacy bill/invoice parser. Analyze this purchase bill image carefully.
+        const prompt = `You are an expert pharmacy data extraction AI. Your job is to extract EVERY row of purchased medicines or items from the provided invoice/bill image into data.
 
-Extract ALL medicines/products with their details from this bill/invoice.
+⚠️ ABSOLUTELY CRITICAL — DO NOT DO ANY MATH:
+You MUST return the EXACT raw text from each column. DO NOT multiply QTY × PACK yourself.
+DO NOT calculate totals. The server handles all arithmetic. Just copy the numbers from the bill.
+Example: If QTY column says "4" and PACK column says "10", return rawQty: "4" and packSize: "10".
+NEVER return rawQty: "40" in this case — that would be WRONG.
 
-EXISTING PRODUCTS IN INVENTORY (try to match names with these for consistency): 
-${existingNamesList || 'No existing products'}
+EXISTING INVENTORY MATCHING:
+The shop already has these products: ${existingNamesList || 'None yet'}
+CRITICAL: If an extracted product name is misspelled or very similar to an existing product (e.g., "Crocin adv" vs "Crocin Advance"), use the EXISTING matching name.
 
-Return ONLY a valid JSON array of objects. Each object must have:
-- "name": string (product/medicine name, capitalize properly, match existing names if similar)
-- "quantity": number (integer quantity purchased)
-- "price": number (purchase price per unit, or null if not visible)
-- "mrp": number (MRP per unit, or null if not visible)
-- "unit": string (e.g., "strip", "box", "bottle", "tablet", "piece", or null)
-- "batchNumber": string (batch/lot number if visible, or null)
-- "expiryDate": string (in YYYY-MM-DD format if visible, or null)
-- "manufacturer": string (manufacturer/company name if visible, or null)
+EXTRACTION INSTRUCTIONS:
+1. Examine the image carefully. Identify all tables or lists of purchased items.
+2. For each distinct product row, extract:
+   - name: The product/medicine name. Exclude pack sizes from the name.
+   - rawQty: The EXACT number from the QTY/Billed Qty column. DO NOT multiply by pack size.
+   - packSize: The EXACT text from the PACK/PKG column (e.g., "10", "15", "1x15").
+   - price: The PURCHASE PRICE per unit (what the pharmacy paid the distributor).
+   - mrp: The MAXIMUM RETAIL PRICE per unit (what the end customer pays).
+   - unit: Packaging unit (Strip, Tablet, Bottle, Box, Tube, Pcs, etc.).
+   - batchNumber: Batch or Lot number.
+   - expiryDate: The EXACT expiry date text as printed on the bill (e.g., "04/27", "04/2027", "APR-27", "2027-04"). Do NOT try to convert the format — just copy it exactly.
+   - manufacturer: Company name (found in the COMP column or header).
 
-Rules:
-1. Extract every product line visible in the bill
-2. If quantity shows "50 strips" parse as quantity:50, unit:"strip"
-3. Prices should be per-unit, not total. If only total is shown, divide by quantity.
-4. Do NOT include markdown formatting. Just raw JSON array.
-5. If no products found, return []`;
+UNIVERSAL PRICING PRINCIPLES (apply to ALL bill formats):
+
+PRINCIPLE 1 — Identify the Purchase Price:
+The purchase price is what the pharmacy paid for the item. It appears under column headers like: Rate, P.Rate, PTR, PTS, Net Rate, Cost, Supplier Price, Trade Price, Basic Rate, or simply "Price" on a purchase invoice. It is ALWAYS LOWER than MRP per unit.
+
+PRINCIPLE 2 — Identify the MRP:
+MRP is the Maximum Retail Price printed on the product packaging. It appears under headers like: MRP, M.R.P, M.R.P., Retail, Retail Price, or Selling Price. It is ALWAYS the HIGHEST per-unit price on the row.
+
+PRINCIPLE 3 — Multiple MRP columns:
+Some bills show multiple MRP values (e.g., N_MRP/O_MRP, New MRP/Old MRP, Revised MRP/Previous MRP). In ALL such cases, extract the CURRENT/NEW/REVISED MRP — this is the one currently printed on the product packaging. Ignore the old/previous value.
+
+PRINCIPLE 4 — Single price column:
+If there is only ONE price column and it is a PURCHASE bill/invoice, check the header. If labeled as Rate/PTR/PTS/Cost → it is the purchase price ("price"). If labeled as MRP → it is the MRP. If unlabeled → assume purchase price and leave "mrp" as null.
+
+PRINCIPLE 5 — Amount vs Per-Unit:
+If you see both a per-unit Rate AND a total Amount, use the per-unit Rate as "price". If only a total Amount is shown, divide by the quantity to get per-unit price.
+
+PRINCIPLE 6 — Free/Bonus quantities:
+Some bills show a "Free" or "Bonus" column. Only extract the paid "Qty" as the quantity. Do NOT add the free items to the quantity.
+
+PRINCIPLE 7 — Discount columns:
+Ignore discount percentage columns (Disc%, Trade Disc, Cash Disc, Scheme). They are for reference only. Extract the final Rate after discounts if available.
+
+PRINCIPLE 8 — Extract Quantity and Pack Size perfectly (CRITICAL FOR SaaS STABILITY):
+Bills ALWAYS list the quantity of items purchased, and MOST bills also list a "PACK" or "PKG" size in a separate column (e.g., 10, 15, 1x15).
+1. Identify the column stating the purchased quantity (often "QTY.", "Billed Qty") -> Extract EXACTLY as "rawQty" (e.g. "4").
+2. The "PACK" column is usually a narrow column located right between the Product Name/Particulars and the BATCH column.
+3. You MUST extract whatever is written in the "PACK" column exactly as "packSize" (e.g., "10", "15", "1", "1x15"). DO NOT skip this column!
+4. CRITICAL: If the QTY is "4" and the PACK is "10", you MUST return rawQty: "4" and packSize: "10".
+- If there is NO Pack column anywhere, leave "packSize" empty (""). DO NOT guess.
+DO NOT do any math. Just return the exact raw text strings from their respective columns.
+
+3. If a value is unreadable, blurred, or missing, omit the field or return null. Do NOT guess prices or numbers.
+4. If the bill is completely illegible or not an invoice, return an empty list.`;
 
         const imagePart = {
             inlineData: {
@@ -469,14 +600,114 @@ Rules:
             }
         };
 
-        let jsonString = await callGeminiWithFallback(prompt, imagePart);
+        // Enforce strict JSON Schema Output for consistent SaaS parsing
+        const SchemaType = require("@google/generative-ai").SchemaType;
+        const generationConfig = {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: SchemaType.ARRAY,
+                description: "List of products extracted from the bill",
+                items: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        name: { type: SchemaType.STRING, description: "Normalized product name" },
+                        rawQty: { type: SchemaType.STRING, description: "The exact Quantity text written on the bill" },
+                        packSize: { type: SchemaType.STRING, description: "The exact text from the PACK or PKG column (e.g., '10', '15', '1x15'). CRITICAL: Do NOT miss this column!", nullable: true },
+                        price: { type: SchemaType.NUMBER, description: "Purchase price per single unit", nullable: true },
+                        mrp: { type: SchemaType.NUMBER, description: "Maximum Retail Price per single unit", nullable: true },
+                        unit: { type: SchemaType.STRING, description: "Packaging unit (Strip, Bottle, Box, etc.)", nullable: true },
+                        batchNumber: { type: SchemaType.STRING, description: "Batch or Lot number", nullable: true },
+                        expiryDate: { type: SchemaType.STRING, description: "Expiry date EXACTLY as printed on the bill (e.g., '04/27', '04/2027', 'APR-27'). Do NOT reformat.", nullable: true },
+                        manufacturer: { type: SchemaType.STRING, description: "Pharmaceutical company name", nullable: true }
+                    },
+                    required: ["name", "rawQty"]
+                }
+            }
+        };
 
-        // Cleanup potential markdown code blocks
+        let jsonString = await callGeminiWithFallback(prompt, imagePart, generationConfig);
+
+        // Cleanup potential markdown code blocks (Gemini sometimes still returns them despite responseMimeType)
         jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
 
+        // Parse the JSON array output
         const products = JSON.parse(jsonString);
         console.log(`Bill file parsed: ${products.length} products found`);
-        res.json({ products });
+
+        // Helper to parse pack strings like "1x15", "20's", "10 Tab"
+        // SAFE FOR SaaS: only multiplies explicit AxB patterns, never random numbers
+        const parseQuantityString = (str) => {
+            if (!str) return 1;
+            let s = str.toString().toUpperCase().trim();
+            
+            // Remove volume/weight parts entirely — these are NOT pack multipliers
+            s = s.replace(/\d+\s*(ML|GM|KG|L|LITER|LITRE|MG|MCG|VIAL|AMP|TUBE)S?\b/gi, '').trim();
+            if (!s) return 1;
+            
+            // Remove common packaging unit words (not multipliers)
+            s = s.replace(/\b(TAB|TABS|TABLET|TABLETS|STRIP|STRIPS|CAP|CAPS|CAPSULE|CAPSULES|BOX|PCS|PIECES|BOTTLE|BOTTLES|UNIT|UNITS|NOS|'S)\b/gi, '').trim();
+            if (!s) return 1;
+            
+            // Pattern 1: Explicit multiplication like "1x15", "2X10", "1x15x3"
+            if (/\d+\s*[xX×]\s*\d+/.test(s)) {
+                const parts = s.split(/[xX×]/i).map(p => parseInt(p.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+                if (parts.length > 0) {
+                    return parts.reduce((acc, n) => acc * n, 1);
+                }
+            }
+            
+            // Pattern 2: Single clean number like "10", "15", "20's" (after stripping)
+            const singleNum = s.match(/^\s*(\d+)\s*$/);
+            if (singleNum) {
+                const num = parseInt(singleNum[1], 10);
+                return num > 0 ? num : 1;
+            }
+            
+            // Default: unable to parse confidently — return 1 (safe for SaaS)
+            return 1;
+        };
+
+        const finalProducts = products.map((p, i) => {
+            // CRITICAL: Only use rawQty — never fall back to p.quantity which may be pre-multiplied by AI
+            let baseQty = 1; 
+            if (p.rawQty !== undefined && p.rawQty !== null) {
+                const parsed = parseFloat(p.rawQty.toString().match(/[\d.]+/)?.[0] || '1');
+                if (!isNaN(parsed) && parsed > 0) baseQty = parsed;
+            } else {
+                console.warn(`[parse-bill-file] Item "${p.name}" missing rawQty, defaulting to 1`);
+            }
+
+            const multiplier = parseQuantityString(p.rawPack || p.packSize);
+            const finalQuantity = baseQty * multiplier;
+
+            console.log(`\n[Item ${i + 1}] ${p.name}`);
+            console.log(`  -> rawQty: "${p.rawQty}", packSize: "${p.packSize}"`);
+            console.log(`  -> parsed baseQty: ${baseQty}, parsed multiplier: ${multiplier}`);
+            console.log(`  -> Final Qty: ${finalQuantity}`);
+            
+            // Sanity check for SaaS: warn if result seems abnormally large
+            if (multiplier > 1 && finalQuantity > 5000) {
+                console.warn(`[parse-bill-file] Unusually large quantity for "${p.name}": ${baseQty} × ${multiplier} = ${finalQuantity}`);
+            }
+
+            return {
+                name: p.name,
+                baseQty: baseQty,
+                packSize: multiplier,
+                quantity: finalQuantity,
+                price: p.price,
+                mrp: p.mrp,
+                unit: p.unit,
+                batchNumber: p.batchNumber,
+                expiryDate: (() => {
+                    const d = normalizeExpiryDate(p.expiryDate);
+                    return d ? d.toISOString().substring(0, 10) : p.expiryDate || null;
+                })(),
+                manufacturer: p.manufacturer
+            };
+        });
+
+        res.json({ products: finalProducts });
     } catch (error) {
         console.error('Bill file parsing error:', error.message || error);
         const isQuota = error.message?.includes('429') || error.message?.includes('quota');
@@ -486,6 +717,111 @@ Rules:
         res.status(isQuota ? 429 : 500).json({ error: msg });
     }
 });
+
+// ============================================
+// EXPIRY DATE NORMALIZER — handles all pharmacy bill date formats
+// ============================================
+// Pharmacy bills use many date formats: 04/27, 04-27, 04/2027, APR-27, 2027-04, 2027-04-01, etc.
+// In pharmacy context, "04/27" ALWAYS means April 2027 (MM/YY), never April 27 of some year.
+const normalizeExpiryDate = (dateStr) => {
+    if (!dateStr) return null;
+    const s = dateStr.toString().trim();
+    if (!s) return null;
+
+    const MONTH_NAMES = {
+        JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6,
+        JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12
+    };
+
+    // Helper: expand 2-digit year to 4-digit (always 20xx for pharmacy context)
+    const expandYear = (y) => {
+        const num = parseInt(y, 10);
+        return num < 100 ? 2000 + num : num;
+    };
+
+    let month, year;
+
+    // Pattern 1: "MM/YY" or "MM-YY" or "MM/YYYY" or "MM-YYYY" (most common on Indian pharmacy bills)
+    const mmYY = s.match(/^(\d{1,2})\s*[\/\-]\s*(\d{2,4})$/);
+    if (mmYY) {
+        const a = parseInt(mmYY[1], 10);
+        const b = parseInt(mmYY[2], 10);
+        // If first number is 1-12, treat as MM/YY
+        if (a >= 1 && a <= 12) {
+            month = a;
+            year = expandYear(b);
+        } else {
+            // Could be YY/MM (rare) — try to detect
+            if (b >= 1 && b <= 12) {
+                month = b;
+                year = expandYear(a);
+            }
+        }
+    }
+
+    // Pattern 2: "YYYY-MM" or "YYYY/MM"
+    if (!month) {
+        const yyyyMM = s.match(/^(\d{4})\s*[\/\-]\s*(\d{1,2})$/);
+        if (yyyyMM) {
+            year = parseInt(yyyyMM[1], 10);
+            month = parseInt(yyyyMM[2], 10);
+        }
+    }
+
+    // Pattern 3: "YYYY-MM-DD" (full ISO date)
+    if (!month) {
+        const iso = s.match(/^(\d{4})\s*[\/\-]\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})$/);
+        if (iso) {
+            year = parseInt(iso[1], 10);
+            month = parseInt(iso[2], 10);
+            // day is ignored — pharmacy expiry is month-level
+        }
+    }
+
+    // Pattern 4: "APR-27", "APR/27", "APR 2027" (month name formats)
+    if (!month) {
+        const monthName = s.match(/^([A-Za-z]{3,})\s*[\/\-\s]\s*(\d{2,4})$/);
+        if (monthName) {
+            const mKey = monthName[1].toUpperCase().substring(0, 3);
+            if (MONTH_NAMES[mKey]) {
+                month = MONTH_NAMES[mKey];
+                year = expandYear(monthName[2]);
+            }
+        }
+    }
+
+    // Pattern 5: "27-APR", "2027/APR" (reversed month name)
+    if (!month) {
+        const revMonth = s.match(/^(\d{2,4})\s*[\/\-\s]\s*([A-Za-z]{3,})$/);
+        if (revMonth) {
+            const mKey = revMonth[2].toUpperCase().substring(0, 3);
+            if (MONTH_NAMES[mKey]) {
+                month = MONTH_NAMES[mKey];
+                year = expandYear(revMonth[1]);
+            }
+        }
+    }
+
+    // If we successfully parsed month and year, build the date
+    if (month && year && month >= 1 && month <= 12 && year >= 2000) {
+        const d = new Date(Date.UTC(year, month - 1, 1));
+        if (!isNaN(d.getTime())) return d;
+    }
+
+    // Fallback: try native Date parsing as last resort
+    const fallback = new Date(s);
+    if (!isNaN(fallback.getTime())) {
+        // Sanity check: if year < 2020, it's likely a misparse (like 2001 from 04/27)
+        if (fallback.getFullYear() < 2020) {
+            console.warn(`[normalizeExpiryDate] Native Date parsed "${s}" as ${fallback.toISOString()} — year too old, likely wrong. Ignoring.`);
+            return null;
+        }
+        return fallback;
+    }
+
+    console.warn(`[normalizeExpiryDate] Could not parse: "${s}"`);
+    return null;
+};
 
 // Confirm parsed bill data and update inventory
 router.post('/confirm-bill', authenticate, authorize('OWNER', 'MANAGER', 'INVENTORY_STAFF'), requireFeature('ai'), async (req, res) => {
@@ -508,6 +844,16 @@ router.post('/confirm-bill', authenticate, authorize('OWNER', 'MANAGER', 'INVENT
 
         for (const item of products) {
             try {
+                let parsedExpiryDate = null;
+                if (item.expiryDate) {
+                    try {
+                        parsedExpiryDate = normalizeExpiryDate(item.expiryDate);
+                    } catch (err) {
+                        console.warn(`[confirm-bill] Could not parse expiry date "${item.expiryDate}" for ${item.name}`);
+                        parsedExpiryDate = null;
+                    }
+                }
+
                 // Try to find existing product by name (case-insensitive)
                 const existingProduct = await prisma.product.findFirst({
                     where: {
@@ -518,35 +864,35 @@ router.post('/confirm-bill', authenticate, authorize('OWNER', 'MANAGER', 'INVENT
                 });
 
                 if (existingProduct) {
+                    // Calculate quantity to add — use Math.round(parseFloat) to preserve fractional accuracy
+                    const qtyToAdd = Math.round(parseFloat(item.quantity) || 0);
+                    const newTotalQty = Number(existingProduct.quantity) + qtyToAdd;
+
                     // Update existing product — add stock
                     const updatedProduct = await prisma.product.update({
                         where: { id: existingProduct.id },
                         data: {
-                            quantity: { increment: parseInt(item.quantity) || 0 },
+                            quantity: newTotalQty,
                             // Update purchase price and MRP if provided (latest bill takes priority)
                             ...(item.price && { purchasePrice: parseFloat(item.price) }),
                             ...(item.mrp && { mrp: parseFloat(item.mrp) }),
                             ...(item.batchNumber && { batchNumber: item.batchNumber }),
-                            ...(item.expiryDate && { expiryDate: new Date(item.expiryDate + 'T00:00:00.000Z') }),
+                            ...(parsedExpiryDate && { expiryDate: parsedExpiryDate }),
                             isActive: true
                         }
                     });
 
                     await logAudit(req.user.id, branchId, 'STOCK_UPDATE', 'Product', updatedProduct.id,
-                        `Bill Parser: Added ${item.quantity} to stock. New total: ${updatedProduct.quantity}`, req.ip);
+                        `Bill Parser: Added ${qtyToAdd} (${item.baseQty || '?'} × ${item.packSize || '1'}) to stock. New total: ${updatedProduct.quantity}`, req.ip);
 
                     results.updated.push({
                         name: updatedProduct.name,
-                        quantityAdded: parseInt(item.quantity) || 0,
+                        quantityAdded: qtyToAdd,
                         newTotal: Number(updatedProduct.quantity)
                     });
                 } else {
                     // Create new product
-                    let parsedExpiryDate = null;
-                    if (item.expiryDate) {
-                        parsedExpiryDate = new Date(item.expiryDate + 'T00:00:00.000Z');
-                    }
-
+                    const newQty = Math.round(parseFloat(item.quantity) || 0);
                     const newProduct = await prisma.product.create({
                         data: {
                             name: item.name.trim(),
@@ -556,7 +902,7 @@ router.post('/confirm-bill', authenticate, authorize('OWNER', 'MANAGER', 'INVENT
                             mrp: parseFloat(item.mrp) || parseFloat(item.price) || 0,
                             purchasePrice: parseFloat(item.price) || 0,
                             gstRate: 12,
-                            quantity: parseInt(item.quantity) || 0,
+                            quantity: newQty,
                             minStock: 10,
                             unit: item.unit?.trim() || 'Pcs',
                             tabletsPerStrip: 10,
@@ -565,11 +911,11 @@ router.post('/confirm-bill', authenticate, authorize('OWNER', 'MANAGER', 'INVENT
                     });
 
                     await logAudit(req.user.id, branchId, 'CREATE', 'Product', newProduct.id,
-                        `Bill Parser: Created product "${newProduct.name}" with qty ${item.quantity}`, req.ip);
+                        `Bill Parser: Created product "${newProduct.name}" with qty ${newQty} (${item.baseQty || '?'} × ${item.packSize || '1'})`, req.ip);
 
                     results.created.push({
                         name: newProduct.name,
-                        quantity: parseInt(item.quantity) || 0
+                        quantity: newQty
                     });
                 }
             } catch (itemError) {

@@ -250,6 +250,19 @@ export default function AIAssistant({ isLocked }) {
         ));
     };
 
+    // Atomic handler for Qty/Pack edits — updates all three fields in one state update
+    // This prevents the race condition where sequential handleEditField calls use stale state
+    const handleQtyPackEdit = (index, field, value) => {
+        setParsedData(prev => prev.map((item, i) => {
+            if (i !== index) return item;
+            const updated = { ...item, [field]: value };
+            const newBase = field === 'baseQty' ? value : (updated.baseQty || 0);
+            const newPack = field === 'packSize' ? value : (updated.packSize || 1);
+            updated.quantity = newBase * newPack;
+            return updated;
+        }));
+    };
+
     const handleRemoveItem = (index) => {
         setParsedData(prev => prev.filter((_, i) => i !== index));
     };
@@ -662,74 +675,145 @@ export default function AIAssistant({ isLocked }) {
                                                 <Edit3 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Click any field to edit before confirming.
                                             </p>
 
+                                            {parsedData.some(p => !p.mrp || !p.batchNumber || !p.expiryDate) && (
+                                                <div className="mb-3 p-3 bg-warning/10 border border-warning/20 rounded-lg flex items-start gap-2 text-sm text-warning-400">
+                                                    <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                                                    <p>
+                                                        <strong>Missing Data Detected:</strong> The AI couldn't confidently extract MRP, Batch, or Expiry for some items due to image quality or bill format. Please verify and update before confirming.
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             <div className="bill-parsed-table-wrap">
                                                 <table className="bill-parsed-table">
                                                     <thead>
                                                         <tr>
                                                             <th>Product</th>
-                                                            <th style={{ width: '60px' }}>Qty</th>
-                                                            <th style={{ width: '70px' }}>Price</th>
+                                                            <th style={{ width: '180px' }}>Qty × Pack = Total</th>
+                                                            <th style={{ width: '90px' }}>Buy ₹</th>
+                                                            <th style={{ width: '90px' }}>MRP ₹</th>
+                                                            <th style={{ width: '120px' }}>Batch</th>
+                                                            <th style={{ width: '130px' }}>Expiry</th>
                                                             <th style={{ width: '35px' }}></th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {parsedData.map((item, idx) => (
-                                                            <tr key={idx}>
-                                                                <td>
-                                                                    <input
-                                                                        className="bill-edit-input"
-                                                                        value={item.name}
-                                                                        onChange={(e) => handleEditField(idx, 'name', e.target.value)}
-                                                                    />
-                                                                    {item.manufacturer && (
-                                                                        <span className="bill-manufacturer">{item.manufacturer}</span>
-                                                                    )}
-                                                                </td>
-                                                                <td>
-                                                                    <input
-                                                                        className="bill-edit-input bill-edit-num"
-                                                                        type="number"
-                                                                        value={item.quantity}
-                                                                        onChange={(e) => handleEditField(idx, 'quantity', parseInt(e.target.value) || 0)}
-                                                                    />
-                                                                </td>
-                                                                <td>
-                                                                    <input
-                                                                        className="bill-edit-input bill-edit-num"
-                                                                        type="number"
-                                                                        value={item.price || item.mrp || ''}
-                                                                        onChange={(e) => handleEditField(idx, 'price', parseFloat(e.target.value) || null)}
-                                                                        placeholder="-"
-                                                                    />
-                                                                </td>
-                                                                <td>
-                                                                    <button
-                                                                        className="bill-remove-row"
-                                                                        onClick={() => handleRemoveItem(idx)}
-                                                                        title="Remove"
-                                                                    >
-                                                                        <Trash2 size={13} />
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
+                                                        {parsedData.map((item, idx) => {
+                                                            const isQtyZero = item.quantity === 0 || !item.quantity;
+                                                            const isMrpLowerThanBuy = item.mrp && item.price && item.mrp < item.price;
+                                                            
+                                                            return (
+                                                                <tr key={idx} className={isQtyZero ? 'bg-danger/5' : isMrpLowerThanBuy ? 'bg-warning/5' : ''}>
+                                                                    <td>
+                                                                        <input
+                                                                            className="bill-edit-input"
+                                                                            value={item.name || ''}
+                                                                            onChange={(e) => handleEditField(idx, 'name', e.target.value)}
+                                                                        />
+                                                                        {item.manufacturer && (
+                                                                            <span className="bill-manufacturer">{item.manufacturer}</span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td>
+                                                                        <div className="flex items-center gap-1 justify-center">
+                                                                            <input
+                                                                                className="bill-edit-input bill-edit-num text-center px-1"
+                                                                                style={{ width: '2.5rem', ...(isQtyZero ? { borderColor: 'var(--danger, #ef4444)', background: 'rgba(239, 68, 68, 0.05)' } : {}) }}
+                                                                                type="number"
+                                                                                value={item.baseQty !== undefined ? item.baseQty : ''}
+                                                                                onChange={(e) => {
+                                                                                    const newBase = parseInt(e.target.value) || 0;
+                                                                                    handleQtyPackEdit(idx, 'baseQty', newBase);
+                                                                                }}
+                                                                                placeholder="Qty"
+                                                                                title="Base Quantity"
+                                                                            />
+                                                                            <span className="text-secondary text-xs">×</span>
+                                                                            <input
+                                                                                className="bill-edit-input bill-edit-num text-center px-1"
+                                                                                style={{ width: '2.5rem' }}
+                                                                                type="number"
+                                                                                value={item.packSize !== undefined ? item.packSize : ''}
+                                                                                onChange={(e) => {
+                                                                                    const newPack = parseInt(e.target.value) || 1;
+                                                                                    handleQtyPackEdit(idx, 'packSize', newPack);
+                                                                                }}
+                                                                                placeholder="Pack"
+                                                                                title="Pack Multiplier"
+                                                                            />
+                                                                            <span className="text-secondary text-xs">=</span>
+                                                                            <span
+                                                                                className="bill-edit-input bill-edit-num text-center px-1 font-semibold"
+                                                                                style={{
+                                                                                    width: '3.5rem',
+                                                                                    display: 'inline-flex',
+                                                                                    alignItems: 'center',
+                                                                                    justifyContent: 'center',
+                                                                                    background: 'rgba(255,255,255,0.03)',
+                                                                                    cursor: 'default',
+                                                                                    ...(isQtyZero ? { borderColor: 'var(--danger, #ef4444)', background: 'rgba(239, 68, 68, 0.05)' } : {})
+                                                                                }}
+                                                                                title="Total Quantity (auto-calculated)"
+                                                                            >
+                                                                                {item.quantity || 0}
+                                                                            </span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <input
+                                                                            className="bill-edit-input bill-edit-num"
+                                                                            type="number"
+                                                                            value={item.price || ''}
+                                                                            onChange={(e) => handleEditField(idx, 'price', parseFloat(e.target.value) || null)}
+                                                                            placeholder="-"
+                                                                        />
+                                                                    </td>
+                                                                    <td>
+                                                                        <input
+                                                                            className="bill-edit-input bill-edit-num"
+                                                                            type="number"
+                                                                            value={item.mrp || ''}
+                                                                            onChange={(e) => handleEditField(idx, 'mrp', parseFloat(e.target.value) || null)}
+                                                                            placeholder="-"
+                                                                            style={
+                                                                                !item.mrp ? { borderColor: 'var(--warning, #f59e0b)', background: 'rgba(245, 158, 11, 0.05)' } 
+                                                                                : isMrpLowerThanBuy ? { borderColor: 'var(--warning, #f59e0b)', background: 'rgba(245, 158, 11, 0.05)' } 
+                                                                                : {}
+                                                                            }
+                                                                            title={isMrpLowerThanBuy ? 'Warning: MRP is lower than Buy Price' : ''}
+                                                                        />
+                                                                    </td>
+                                                                    <td>
+                                                                        <input
+                                                                            className="bill-edit-input text-xs"
+                                                                            value={item.batchNumber || ''}
+                                                                            onChange={(e) => handleEditField(idx, 'batchNumber', e.target.value)}
+                                                                            placeholder="-"
+                                                                        />
+                                                                    </td>
+                                                                    <td>
+                                                                        <input
+                                                                            className="bill-edit-input text-xs"
+                                                                            type="month"
+                                                                            value={item.expiryDate ? item.expiryDate.substring(0, 7) : ''}
+                                                                            onChange={(e) => handleEditField(idx, 'expiryDate', e.target.value ? `${e.target.value}-01` : null)}
+                                                                        />
+                                                                    </td>
+                                                                    <td>
+                                                                        <button
+                                                                            className="bill-remove-row"
+                                                                            onClick={() => handleRemoveItem(idx)}
+                                                                            title="Remove"
+                                                                        >
+                                                                            <Trash2 size={13} />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             </div>
-
-                                            {/* Batch/Expiry details if available */}
-                                            {parsedData.some(p => p.batchNumber || p.expiryDate) && (
-                                                <div className="bill-extra-details">
-                                                    <p className="text-xs text-secondary mb-1 font-medium">Additional Details Extracted:</p>
-                                                    {parsedData.filter(p => p.batchNumber || p.expiryDate).map((item, idx) => (
-                                                        <div key={idx} className="bill-extra-row">
-                                                            <span className="bill-extra-name">{item.name}</span>
-                                                            {item.batchNumber && <span className="bill-extra-tag">Batch: {item.batchNumber}</span>}
-                                                            {item.expiryDate && <span className="bill-extra-tag">Exp: {item.expiryDate}</span>}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
                                     )}
                                 </div>
